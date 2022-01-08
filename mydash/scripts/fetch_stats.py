@@ -117,9 +117,9 @@ def fetch_competitions(year):
 
 def main():
     records = []
-    for year in range(2015, 2016):
-        for comp in fetch_competitions(year)[:1]:
-            for team in fetch_teams(comp)[:1]:
+    for year in range(2015, 2022):
+        for comp in fetch_competitions(year):
+            for team in fetch_teams(comp):
                 for stat in fetch_stats(comp, team):
                     record = dict()
                     record.update(asdict(comp))
