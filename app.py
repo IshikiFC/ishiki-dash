@@ -140,14 +140,16 @@ app.layout = html.Div([
     Output('player-table', "data"),
     Output('player-table', 'page_count'),
     Input('joined-team-dropdown', 'value'),
+    Input('prev-team-dropdown', 'value'),
     Input('player-table', "page_current"),
     Input('page-size-input', "value"),
 )
-def update_player_table(selected_joined_teams, page_current, page_size):
+def update_player_table(selected_joined_teams, selected_prev_teams, page_current, page_size):
+    df = rookie_df
     if selected_joined_teams:
-        df = rookie_df[rookie_df['joined_team_name'].isin(selected_joined_teams)]
-    else:
-        df = rookie_df
+        df = df[df['joined_team_name'].isin(selected_joined_teams)]
+    if selected_prev_teams:
+        df = df[df['prev_team_name'].isin(selected_prev_teams)]
 
     records = df.iloc[page_current * page_size:(page_current + 1) * page_size] \
         .to_dict('records')
