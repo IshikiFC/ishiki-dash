@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from mydash.utils import init_logger, clean_name
+from mydash.utils import init_logger, clean_text, clean_name, canonicalize_team
 
 LOGGER = getLogger(__name__)
 
@@ -24,19 +24,17 @@ def contains_class(div, class_name):
     return class_name in div.attrs.get('class', [])
 
 
-def extract_name(div):
+def extract_text(div):
     if contains_class(div, 'group_title'):
-        text = div.find(class_='gt_j').text
-    else:
-        text = div.text
-    return clean_name(text)
+        return div.find(class_='gt_j').text
+    return div.text
 
 
 def extract_player_meta(div):
     cells = div.find('table').find_all('td')
     meta = {
         'birth': cells[2].text,
-        'prev_team_name': cells[3].text
+        'prev_team_name': canonicalize_team(clean_text(cells[3].text))
     }
     return meta
 
@@ -60,14 +58,14 @@ def fetch_players(year, league_id):
     divs = soup.find(class_=main_tag).find_all('div')
     for i, div in enumerate(divs):
         if contains_class(div, team_tag):
-            team_name = extract_name(div)
+            team_name = canonicalize_team(clean_text(extract_text(div)))
         if contains_class(div, player_tag):
             assert team_name
             record = {
                 'year': year,
                 'league': league_id,
                 'team_name': team_name,
-                'player_name': extract_name(div)
+                'player_name': clean_name(extract_text(div))
             }
             record.update(extract_player_meta(divs[i + 1]))
             records.append(record)
