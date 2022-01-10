@@ -7,7 +7,7 @@ import pandas as pd
 from dash import dcc, Output, Input, dash_table
 from dash import html
 
-from mydash.figures import scatter_plot_play_time, bar_plot_player_count
+from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count
 
 app = dash.Dash(__name__)
 
@@ -15,16 +15,13 @@ rookie_df = pd.read_csv('./data/rookies.csv')
 rookie_df = rookie_df.rename(
     columns={'year': 'joined_year', 'league': 'joined_league_id', 'team_name': 'joined_team_name'})
 rookie_df['joined_league'] = rookie_df['joined_league_id'].map(lambda x: f'J{x}')
+rookie_df['player_label'] = rookie_df.apply(lambda x: '{0}({1})<br>{2}<br>{3}'.format(
+    x['player_name'], x['joined_year'], x['joined_team_name'], x['prev_team_name']), axis=1)
 
 stats_df = pd.read_csv('./data/stats.csv')
 stats_df['league'] = stats_df['league_id'].map(lambda x: f'J{x}')
-
-plot_df = pd.merge(
-    rookie_df[['player_name', 'joined_year', 'joined_team_name', 'joined_league_id', 'prev_team_name', 'birth']],
-    stats_df[['player_name', 'year', 'league_id', 'league', 'team_name', 'apps', 'minutes', 'goals']],
-    on='player_name'
-)
-plot_df['rookie_year'] = plot_df['year'] - plot_df['joined_year'] + 1
+stats_df = pd.merge(stats_df, rookie_df[['player_name', 'joined_year']], on='player_name')
+stats_df['rookie_year'] = stats_df['year'] - stats_df['joined_year'] + 1
 
 joined_teams = list(rookie_df['joined_team_name'].unique())
 prev_teams = list(rookie_df['prev_team_name'].unique())
@@ -98,15 +95,11 @@ app.layout = html.Div([
 ])
 
 
-def filter_rookie_df(df, selected_joined_teams=None, selected_prev_teams=None):
+def filter_rookie_df(df, selected_joined_teams=None, selected_prev_teams=None, player_names=None):
     if selected_joined_teams:
         df = df[df['joined_team_name'].isin(selected_joined_teams)]
     if selected_prev_teams:
         df = df[df['prev_team_name'].isin(selected_prev_teams)]
-    return df
-
-
-def filter_plot_df(df, player_names=None):
     if player_names:
         df = df[df['player_name'].isin(player_names)]
     return df
@@ -135,8 +128,9 @@ def update_player_table(selected_joined_teams, selected_prev_teams, page_current
 )
 def update_player_graph(rows):
     player_names = [row['player_name'] for row in rows]
-    df = filter_plot_df(plot_df, player_names)
-    fig = scatter_plot_play_time(df)
+    f_rookie_df = filter_rookie_df(rookie_df, player_names=player_names)
+    f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
+    fig = do_scatter_plot_play_time(f_rookie_df, f_stats_df)
     return [
         dcc.Graph(
             id='player-graph',
@@ -151,8 +145,8 @@ def update_player_graph(rows):
     Input('prev-team-dropdown', 'value')
 )
 def update_player_count_graph(selected_joined_teams, selected_prev_teams):
-    df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
-    fig = bar_plot_player_count(df)
+    f_rookie_df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
+    fig = do_bar_plot_player_count(f_rookie_df)
     return [
         dcc.Graph(
             id='player-count-graph',
