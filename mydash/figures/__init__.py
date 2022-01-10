@@ -1,4 +1,3 @@
-from collections import defaultdict
 from logging import getLogger
 
 import pandas as pd
@@ -38,21 +37,11 @@ def do_scatter_plot_play_time(rookie_df, stats_df):
     return fig
 
 
-def do_bar_plot_player_count(df):
-    player_count = defaultdict(int)  # key: (year, league_id)
-    for _, row in df.iterrows():
-        key = (row['joined_year'], row['joined_league_id'])
-        player_count[key] += 1
-    records = []
-    for year in range(2015, 2022):
-        for league_id in range(1, 4):
-            records.append({
-                'year': year,
-                'league': f'J{league_id}',
-                'player_count': player_count[(year, league_id)]
-            })
-
-    count_df = pd.DataFrame(records)
-    fig = px.bar(count_df, x="year", y="player_count", color="league",
-                 category_orders={'league': ['J1', 'J2', 'J3']})
+def do_bar_plot_player_count(rookie_df):
+    count_df = rookie_df.groupby(['joined_year', 'joined_league']).size() \
+        .reset_index().rename(columns={0: 'player_count'})
+    fig = px.bar(count_df, x="joined_year", y="player_count", color="joined_league",
+                 category_orders={'joined_league': ['J1', 'J2', 'J3']},
+                 range_x=[2014.5, 2021.5])
+    fig.update_traces(width=0.8)
     return fig

@@ -114,10 +114,10 @@ def filter_rookie_df(df, selected_joined_teams=None, selected_prev_teams=None, p
     Input('page-size-input', "value"),
 )
 def update_player_table(selected_joined_teams, selected_prev_teams, page_current, page_size):
-    df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
-    records = df.iloc[page_current * page_size:(page_current + 1) * page_size] \
+    f_rookie_df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
+    records = f_rookie_df.iloc[page_current * page_size:(page_current + 1) * page_size] \
         .to_dict('records')
-    page_count = math.ceil(len(df) / page_size)
+    page_count = math.ceil(len(f_rookie_df) / page_size)
 
     return [records, page_count]
 
