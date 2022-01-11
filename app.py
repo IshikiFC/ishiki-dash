@@ -22,6 +22,7 @@ stats_df = pd.read_csv('./data/stats.csv')
 stats_df['league'] = stats_df['league_id'].map(lambda x: f'J{x}')
 stats_df = pd.merge(stats_df, rookie_df[['player_name', 'joined_year']], on='player_name')
 stats_df['rookie_year'] = stats_df['year'] - stats_df['joined_year'] + 1
+stats_df['stats_label'] = stats_df.apply(lambda x: '{0}({1})'.format(x['team_name'], x['year']), axis=1)
 
 joined_teams = list(rookie_df['joined_team_name'].unique())
 prev_teams = list(rookie_df['prev_team_name'].unique())
@@ -130,7 +131,13 @@ def update_player_graph(rows):
     player_names = [row['player_name'] for row in rows]
     f_rookie_df = filter_rookie_df(rookie_df, player_names=player_names)
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
-    fig = do_scatter_plot_play_time(f_rookie_df, f_stats_df)
+
+    fig = do_scatter_plot_play_time(
+        f_rookie_df,
+        f_stats_df,
+        hover_name='stats_label',
+        hover_data={'rookie_year': False, 'y': False, 'league': False, 'apps': True, 'goals': True}
+    )
     return [
         dcc.Graph(
             id='player-graph',

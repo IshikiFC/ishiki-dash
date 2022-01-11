@@ -6,7 +6,7 @@ import plotly.express as px
 LOGGER = getLogger(__name__)
 
 
-def do_scatter_plot_play_time(rookie_df, stats_df):
+def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
     rookie_df = rookie_df.reset_index(drop=True) \
         .reset_index(drop=False) \
         .rename(columns={'index': 'player_index'})
@@ -16,7 +16,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df):
     fig = px.scatter(stats_df, x='rookie_year', y='y', size='minutes',
                      color='league',
                      category_orders={'league': ['J1', 'J2', 'J3']},
-                     hover_data=['team_name', 'minutes', 'apps', 'goals'])
+                     **kwargs)
     fig.update_yaxes(range=[4 * len(rookie_df) + 1, 0])
     fig.update_xaxes(range=[0.5, 7.5])
     fig.update_traces(marker=dict(
