@@ -7,7 +7,7 @@ import pandas as pd
 from dash import dcc, Output, Input, dash_table
 from dash import html
 
-from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count
+from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_scatter_plot_avg_play_time
 
 app = dash.Dash(__name__)
 
@@ -17,6 +17,7 @@ rookie_df = rookie_df.rename(
 rookie_df['joined_league'] = rookie_df['joined_league_id'].map(lambda x: f'J{x}')
 rookie_df['player_label'] = rookie_df.apply(lambda x: '{0}({1})<br>{2}<br>{3}'.format(
     x['player_name'], x['joined_year'], x['joined_team_name'], x['prev_team_name']), axis=1)
+rookie_df['current_year'] = 2021 - rookie_df['joined_year'] + 1
 
 stats_df = pd.read_csv('./data/stats.csv')
 stats_df['league'] = stats_df['league_id'].map(lambda x: f'J{x}')
@@ -68,7 +69,7 @@ app.layout = html.Div([
                         children=[dash_table.DataTable(
                             id='player-table',
                             columns=[
-                                {"name": i, "id": i} for i in
+                                {'name': i, 'id': i} for i in
                                 ['player_name', 'joined_year', 'joined_league_id', 'joined_team_name', 'prev_team_name']
                             ],
                             page_current=0,
@@ -87,6 +88,9 @@ app.layout = html.Div([
                     html.Div(
                         id='player-count-graph-container',
                     ),
+                    html.Div(
+                        id='avg-player-graph-container'
+                    )
                 ]
             ),
 
@@ -107,12 +111,12 @@ def filter_rookie_df(df, selected_joined_teams=None, selected_prev_teams=None, p
 
 
 @app.callback(
-    Output('player-table', "data"),
+    Output('player-table', 'data'),
     Output('player-table', 'page_count'),
     Input('joined-team-dropdown', 'value'),
     Input('prev-team-dropdown', 'value'),
-    Input('player-table', "page_current"),
-    Input('page-size-input', "value"),
+    Input('player-table', 'page_current'),
+    Input('page-size-input', 'value'),
 )
 def update_player_table(selected_joined_teams, selected_prev_teams, page_current, page_size):
     f_rookie_df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
@@ -125,7 +129,7 @@ def update_player_table(selected_joined_teams, selected_prev_teams, page_current
 
 @app.callback(
     Output('player-graph-container', 'children'),
-    Input('player-table', "data"),
+    Input('player-table', 'data'),
 )
 def update_player_graph(rows):
     player_names = [row['player_name'] for row in rows]
@@ -136,7 +140,8 @@ def update_player_graph(rows):
         f_rookie_df,
         f_stats_df,
         hover_name='stats_label',
-        hover_data={'rookie_year': False, 'y': False, 'league': False, 'apps': True, 'goals': True}
+        hover_data={'minutes': True, 'apps': True, 'goals': True,
+                    'rookie_year': False, 'y': False, 'league': False}
     )
     return [
         dcc.Graph(
@@ -147,7 +152,7 @@ def update_player_graph(rows):
 
 
 @app.callback(
-    Output('player-count-graph-container', "children"),
+    Output('player-count-graph-container', 'children'),
     Input('joined-team-dropdown', 'value'),
     Input('prev-team-dropdown', 'value')
 )
@@ -157,6 +162,23 @@ def update_player_count_graph(selected_joined_teams, selected_prev_teams):
     return [
         dcc.Graph(
             id='player-count-graph',
+            figure=fig
+        )
+    ]
+
+
+@app.callback(
+    Output('avg-player-graph-container', 'children'),
+    Input('joined-team-dropdown', 'value'),
+    Input('prev-team-dropdown', 'value')
+)
+def update_avg_player_graph(selected_joined_teams, selected_prev_teams):
+    f_rookie_df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
+    f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
+    fig = do_scatter_plot_avg_play_time(f_rookie_df, f_stats_df)
+    return [
+        dcc.Graph(
+            id='avg-player-graph',
             figure=fig
         )
     ]

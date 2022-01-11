@@ -16,3 +16,8 @@ def clean_text(s):
 def build_url(base_url, query_dict):
     query = urllib.parse.urlencode(query_dict)
     return f'{base_url}?{query}'
+
+
+def assert_columns(df, columns):
+    for col in columns:
+        assert col in df.columns

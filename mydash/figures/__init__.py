@@ -3,10 +3,15 @@ from logging import getLogger
 import pandas as pd
 import plotly.express as px
 
+from mydash.utils import assert_columns
+
 LOGGER = getLogger(__name__)
 
 
 def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
+    assert_columns(rookie_df, ['player_name', 'player_label'])
+    assert_columns(stats_df, ['player_name', 'rookie_year', 'league_id', 'league', 'minutes'])
+
     rookie_df = rookie_df.reset_index(drop=True) \
         .reset_index(drop=False) \
         .rename(columns={'index': 'player_index'})
@@ -17,7 +22,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
                      color='league',
                      category_orders={'league': ['J1', 'J2', 'J3']},
                      **kwargs)
-    fig.update_yaxes(range=[4 * len(rookie_df) + 1, 0])
+    fig.update_yaxes(range=[4 * len(rookie_df), 0])
     fig.update_xaxes(range=[0.5, 7.5])
     fig.update_traces(marker=dict(
         sizemode='area',
@@ -27,7 +32,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
     fig.update_layout(
         autosize=False,
         width=800,
-        height=max(500, len(rookie_df) * 100),
+        height=max(250, (len(rookie_df) + 1) * 100),
         yaxis=dict(
             title_text='',
             ticktext=rookie_df['player_label'],
@@ -35,6 +40,36 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
         )
     )
     return fig
+
+
+def do_scatter_plot_avg_play_time(rookie_df, stats_df):
+    assert_columns(rookie_df, ['current_year'])
+    assert_columns(stats_df, ['rookie_year', 'league_id', 'league', 'minutes', 'apps', 'goals'])
+
+    agg_rookie_df = rookie_df.groupby('current_year').size().reset_index() \
+        .rename(columns={'current_year': 'rookie_year', 0: 'player_count'})
+    count_df = pd.DataFrame({'rookie_year': range(1, 8)})
+    count_df = pd.merge(count_df, agg_rookie_df, on='rookie_year', how='left')
+    count_df['player_count'] = count_df['player_count'].fillna(0).astype(int)
+    count_df['player_count'] = count_df['player_count'][::-1].cumsum()[::-1]
+
+    agg_stats_df = stats_df.groupby(['rookie_year', 'league_id', 'league'])[['minutes', 'apps', 'goals']].sum() \
+        .reset_index()
+    agg_stats_df = pd.merge(agg_stats_df, count_df, on='rookie_year')
+    for field in ['minutes', 'apps', 'goals']:
+        agg_stats_df[field] = agg_stats_df[field] / agg_stats_df['player_count']
+
+    # build dummy DataFrames for scatter_plot
+    d_rookie_df = pd.DataFrame([{'player_name': 'avg', 'player_label': 'avg'}])
+    d_stats_df = agg_stats_df
+    d_stats_df['player_name'] = 'avg'
+
+    return do_scatter_plot_play_time(
+        d_rookie_df,
+        d_stats_df,
+        hover_data={'minutes': ':.1f', 'apps': ':.1f', 'goals': ':.1f', 'player_count': True,
+                    'rookie_year': False, 'y': False, 'league': False}
+    )
 
 
 def do_bar_plot_player_count(rookie_df):
