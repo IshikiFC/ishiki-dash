@@ -1,7 +1,7 @@
 ```
 python -m venv .venv
 source .venv/bin/activate
-pip install -m requirements.txt
+pip install -r requirements.txt
 ```
 
 ```
