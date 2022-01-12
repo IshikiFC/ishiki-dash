@@ -7,7 +7,8 @@ import pandas as pd
 from dash import dcc, Output, Input, dash_table
 from dash import html
 
-from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_scatter_plot_avg_play_time
+from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_scatter_plot_avg_play_time, \
+    do_histogram_play_time
 
 app = dash.Dash(__name__)
 
@@ -53,6 +54,14 @@ app.layout = html.Div([
                 max=100,
                 value=5,
                 style={'width': 100, 'height': 30, 'marginLeft': 10, 'marginTop': 'auto', 'marginBottom': 'auto'}
+            ),
+            dcc.Input(
+                id='rookie-year-input',
+                type='number',
+                min=1,
+                max=7,
+                value=1,
+                style={'width': 100, 'height': 30, 'marginLeft': 10, 'marginTop': 'auto', 'marginBottom': 'auto'}
             )
         ],
         style={'display': 'flex', 'flex-direction': 'row'}
@@ -62,7 +71,7 @@ app.layout = html.Div([
         id='two-pane-container',
         children=[
             html.Div(
-                id='left-container',
+                id='player-container',
                 children=[
                     html.Div(
                         id='player-table-container',
@@ -80,20 +89,24 @@ app.layout = html.Div([
                     html.Div(
                         id='player-graph-container'
                     ),
-                ]
+                ],
+                style={'width': 800, 'margin': 50}
             ),
             html.Div(
-                id='right-container',
+                id='agg-container',
                 children=[
                     html.Div(
                         id='player-count-graph-container',
                     ),
                     html.Div(
                         id='avg-player-graph-container'
+                    ),
+                    html.Div(
+                        id='play-time-histogram-container'
                     )
-                ]
+                ],
+                style={'width': 800, 'margin': 50}
             ),
-
         ],
         style={'display': 'flex', 'flex-direction': 'row'}
     )
@@ -176,6 +189,25 @@ def update_avg_player_graph(selected_joined_teams, selected_prev_teams):
     f_rookie_df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
     fig = do_scatter_plot_avg_play_time(f_rookie_df, f_stats_df)
+    return [
+        dcc.Graph(
+            id='avg-player-graph',
+            figure=fig
+        )
+    ]
+
+
+@app.callback(
+    Output('play-time-histogram-container', 'children'),
+    Input('joined-team-dropdown', 'value'),
+    Input('prev-team-dropdown', 'value'),
+    Input('rookie-year-input', 'value'),
+)
+def update_play_time_histogram(selected_joined_teams, selected_prev_teams, rookie_year):
+    f_rookie_df = filter_rookie_df(rookie_df, selected_joined_teams, selected_prev_teams)
+    f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
+    f_stats_df = f_stats_df[f_stats_df['rookie_year'] == rookie_year]
+    fig = do_histogram_play_time(f_stats_df)
     return [
         dcc.Graph(
             id='avg-player-graph',

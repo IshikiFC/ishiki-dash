@@ -2,6 +2,8 @@ from logging import getLogger
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.colors import DEFAULT_PLOTLY_COLORS
 
 from mydash.utils import assert_columns
 
@@ -70,6 +72,27 @@ def do_scatter_plot_avg_play_time(rookie_df, stats_df):
         hover_data={'minutes': ':.1f', 'apps': ':.1f', 'goals': ':.1f', 'player_count': True,
                     'rookie_year': False, 'y': False, 'league': False}
     )
+
+
+def do_histogram_play_time(stats_df):
+    assert_columns(stats_df, ['league_id', 'minutes'])
+
+    fig = go.Figure()
+    for league_id, color in zip(range(1, 4), DEFAULT_PLOTLY_COLORS):
+        fig.add_trace(go.Histogram(
+            x=stats_df[stats_df['league_id'] == league_id]['minutes'],
+            name=f'J{league_id}',
+            marker_color=color,
+            xbins=dict(start=0, end=3600, size=100)
+        ))
+    fig.update_xaxes(range=[0, 3600])
+    fig.update_layout(
+        xaxis_title_text='minutes',
+        yaxis_title_text='#players',
+        bargap=0.2,
+        bargroupgap=0.1
+    )
+    return fig
 
 
 def do_bar_plot_player_count(rookie_df):
