@@ -6,7 +6,7 @@ pip install -r requirements.txt
 
 ```
 python -m mydash.scripts.fetch_stats
-python -m mydash.scripts.fetch_rookies
+python -m mydash.scripts.fetch_rookie
 ```
 
 ```

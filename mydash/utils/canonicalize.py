@@ -1,3 +1,5 @@
+from mydash.utils import reverse_list_map
+
 TEAM_TO_ALIASES = {
     'JFAアカデミー福島': ['JFAアカデミー福島U18', 'JFAアカデミー福島U-18'],
     '三菱養和ユース': ['三菱養和SCユース'],
@@ -12,10 +14,7 @@ TEAM_TO_ALIASES = {
     '流通経済大柏高': ['流通経済大学付属柏高'],
     '湘南U-18': ['湘南ユース'],
 }
-ALIAS_TO_TEAM = dict()
-for team, aliases in TEAM_TO_ALIASES.items():
-    for alias in aliases:
-        ALIAS_TO_TEAM[alias] = team
+ALIAS_TO_TEAM = reverse_list_map(TEAM_TO_ALIASES)
 
 ALIAS_TO_PLAYER = {
     '川崎裕大': '川﨑裕大',

@@ -21,3 +21,11 @@ def build_url(base_url, query_dict):
 def assert_columns(df, columns):
     for col in columns:
         assert col in df.columns
+
+
+def reverse_list_map(list_map):
+    ret = dict()
+    for k, vs in list_map.items():
+        for v in vs:
+            ret[v] = k
+    return ret

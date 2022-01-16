@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from mydash.utils import init_logger, clean_text, clean_name, canonicalize_team, canonicalize_player
+from mydash.utils.categorize import categorize_team
 
 LOGGER = getLogger(__name__)
 
@@ -37,6 +38,7 @@ def extract_player_meta(div):
         'birth': cells[2].text,
         'prev_team_name': canonicalize_team(clean_text(cells[3].text))
     }
+    meta['prev_team_category'] = categorize_team(meta['prev_team_name']).name
     return meta
 
 
@@ -81,14 +83,15 @@ def main():
         for league in range(1, 4):
             records += fetch_players(year, league)
     out_df = pd.DataFrame(records)
-    out_df = out_df[['year', 'league', 'player_name', 'team_name', 'prev_team_name', 'birth', 'position']]
+    out_df = out_df[['year', 'league', 'player_name', 'team_name', 'prev_team_name', 'prev_team_category', 'birth',
+                     'position']]
     out_df.to_csv(args.out, index=False)
     LOGGER.info(f'saved rookies in {args.out}')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Soccer D.B.から新卒選手を取得する')
-    parser.add_argument('-o', '--out', help='出力ファイル名', default='./data/rookies.csv')
+    parser.add_argument('-o', '--out', help='出力ファイル名', default='./data/rookie.csv')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
     init_logger(args)

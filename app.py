@@ -12,7 +12,7 @@ from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, 
 
 app = dash.Dash(__name__)
 
-rookie_df = pd.read_csv('./data/rookies.csv')
+rookie_df = pd.read_csv('./data/rookie.csv')
 rookie_df = rookie_df.rename(
     columns={'year': 'joined_year', 'league': 'joined_league_id', 'team_name': 'joined_team_name'})
 rookie_df['joined_league'] = rookie_df['joined_league_id'].map(lambda x: f'J{x}')
