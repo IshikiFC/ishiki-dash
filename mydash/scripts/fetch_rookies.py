@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from mydash.utils import init_logger, clean_text, clean_name, canonicalize_team
+from mydash.utils import init_logger, clean_text, clean_name, canonicalize_team, canonicalize_player
 
 LOGGER = getLogger(__name__)
 
@@ -33,6 +33,7 @@ def extract_text(div):
 def extract_player_meta(div):
     cells = div.find('table').find_all('td')
     meta = {
+        'position': cells[0].text,
         'birth': cells[2].text,
         'prev_team_name': canonicalize_team(clean_text(cells[3].text))
     }
@@ -65,7 +66,7 @@ def fetch_players(year, league_id):
                 'year': year,
                 'league': league_id,
                 'team_name': team_name,
-                'player_name': clean_name(extract_text(div))
+                'player_name': canonicalize_player(clean_name(extract_text(div)))
             }
             record.update(extract_player_meta(divs[i + 1]))
             records.append(record)
