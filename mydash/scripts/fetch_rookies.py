@@ -81,7 +81,7 @@ def main():
         for league in range(1, 4):
             records += fetch_players(year, league)
     out_df = pd.DataFrame(records)
-    out_df = out_df[['year', 'league', 'player_name', 'team_name', 'prev_team_name', 'birth']]
+    out_df = out_df[['year', 'league', 'player_name', 'team_name', 'prev_team_name', 'birth', 'position']]
     out_df.to_csv(args.out, index=False)
     LOGGER.info(f'saved rookies in {args.out}')
 
