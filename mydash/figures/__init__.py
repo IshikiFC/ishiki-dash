@@ -23,7 +23,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
     fig = px.scatter(stats_df, x='rookie_year', y='y', size='minutes',
                      color='league',
                      category_orders={'league': ['J1', 'J2', 'J3']},
-                     height=max(250, (len(rookie_df) + 1) * 100),
+                     height=max(230, (len(rookie_df) + 1) * 80),
                      **kwargs)
     fig.update_yaxes(range=[4 * len(rookie_df), 0])
     fig.update_xaxes(range=[0.5, 7.5])
@@ -36,6 +36,9 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
             title_text='',
             ticktext=rookie_df['player_label'],
             tickvals=rookie_df['player_index'] * 4 + 2
+        ),
+        xaxis=dict(
+            title_text='rookie year'
         )
     )
     return fig
@@ -59,9 +62,10 @@ def do_scatter_plot_avg_play_time(rookie_df, stats_df):
         agg_stats_df[field] = agg_stats_df[field] / agg_stats_df['player_count']
 
     # build dummy DataFrames for scatter_plot
-    d_rookie_df = pd.DataFrame([{'player_name': 'avg', 'player_label': 'avg'}])
+    player_name = 'Avg.'
+    d_rookie_df = pd.DataFrame([{'player_name': player_name, 'player_label': player_name}])
     d_stats_df = agg_stats_df
-    d_stats_df['player_name'] = 'avg'
+    d_stats_df['player_name'] = player_name
 
     return do_scatter_plot_play_time(
         d_rookie_df,
@@ -98,4 +102,9 @@ def do_bar_plot_player_count(rookie_df):
     fig = px.bar(count_df, x="joined_year", y="player_count", color="joined_league",
                  category_orders={'joined_league': ['J1', 'J2', 'J3']},
                  range_x=[2014.5, 2021.5])
+    fig.update_layout(
+        xaxis_title_text='year',
+        yaxis_title_text='#player',
+        legend_title_text='league'
+    )
     return fig

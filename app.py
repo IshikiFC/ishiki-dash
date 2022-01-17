@@ -35,8 +35,7 @@ league_options = [{'label': f'J{x}', 'value': x} for x in [1, 2, 3]]
 category_options = [{'label': x.value, 'value': x.name} for x in TeamCategory]
 position_options = [{'label': x, 'value': x} for x in ['GK', 'DF', 'MF', 'FW']]
 
-dropbox_style = {'width': '100%', 'maxWidth': '200px', 'marginLeft': 10, 'marginRight': 10, 'marginTop': 3,
-                 'marginBottom': 3}
+dropbox_style = {'width': '100%', 'maxWidth': '250px', 'margin': '3px'}
 input_style = {'width': 100, 'marginLeft': 10, 'marginRight': 10, 'marginTop': 'auto', 'marginBottom': 'auto'}
 slider_style = {'width': 500, 'margin': 10}
 
@@ -49,7 +48,7 @@ def wrap_with_card(content):
     ])
 
 
-sidebar = html.Div(
+selector_container = dbc.Row(
     id='selector-container',
     children=[
         dcc.Dropdown(id='joined-team-dropdown', placeholder='加入チーム', options=joined_team_options,
@@ -67,40 +66,48 @@ sidebar = html.Div(
             children=[
                 dcc.RangeSlider(
                     id='joined-year-range-slider', min=2015, max=2021, value=[2015, 2021],
-                    marks={i: str(i)[-2:] for i in range(2015, 2022)})],
+                    marks={i: str(i) for i in range(2015, 2022)})],
             style=slider_style
         ),
-        dcc.Input(id='page-size-input', type='number', min=1, max=100, value=5, style=input_style),
-        dcc.Input(id='rookie-year-input', type='number', min=1, max=7, value=1, style=input_style),
     ],
     style={'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'center'}
 )
 
-content1 = dbc.Row(
+col2label = {
+    'player_name': 'Name',
+    'joined_year': 'Year',
+    'joined_league': 'League',
+    'joined_team_name': 'Team',
+    'prev_team_name': 'Prev.',
+    'position': 'Position',
+}
+
+player_container = html.Div(
     id='player-container',
     children=[
-        dbc.Col(
+        html.Div(
             id='player-table-container',
             children=dash_table.DataTable(
                 id='player-table',
-                columns=[
-                    {'name': i.replace('_', ' '), 'id': i} for i in
-                    ['player_name', 'joined_year', 'joined_league_id', 'joined_team_name', 'prev_team_name']
-                ],
+                columns=[{'name': label, 'id': col} for col, label in col2label.items()],
                 page_current=0,
+                page_size=5,
                 page_action='custom',
                 style_cell={
                     'whiteSpace': 'normal',
                     'height': 'auto'
+                },
+                style_header={
+                    'fontWeight': 'bold',
+                    'textAlign': 'center'
                 }
             ),
         ),
-        dbc.Col(id='player-graph-container'),
-    ],
-    style={'justify-content': 'center'}
+        html.Div(id='player-graph-container'),
+    ]
 )
 
-content2 = html.Div(
+agg_container = html.Div(
     id='agg-container',
     children=[
         html.Div(id='player-count-graph-container'),
@@ -111,17 +118,16 @@ content2 = html.Div(
 
 app.layout = dbc.Container(
     [
-        html.Div(sidebar, className='bg-light'),
+        html.Div(selector_container, className='bg-light'),
         dbc.Row(
             [
-                html.Div(content1, className='col-xl-6'),
-                html.Div(content2, className='col-xl-6')
-            ],
-            style={"height": "10vh"}
+                html.Div(player_container, className='col-xl-6'),
+                html.Div(agg_container, className='col-xl-6')
+            ]
         ),
         dcc.Store(id='filtered-rookie-json')
     ],
-    fluid=False
+    fluid=True
 )
 
 
@@ -161,7 +167,7 @@ def update_matched_rookie_df(joined_teams, prev_teams, joined_league_ids, prev_c
                                    joined_league_ids=joined_league_ids,
                                    prev_categories=prev_categories, positions=positions,
                                    joined_year_range=joined_year_range)
-    return f_rookie_df.to_json(date_format='iso', orient='split')
+    return f_rookie_df.to_json(orient='split')
 
 
 @app.callback(
@@ -169,7 +175,8 @@ def update_matched_rookie_df(joined_teams, prev_teams, joined_league_ids, prev_c
     Output('player-table', 'page_count'),
     Input('filtered-rookie-json', 'data'),
     Input('player-table', 'page_current'),
-    Input('page-size-input', 'value'),
+    Input('player-table', 'page_size'),
+    prevent_initial_call=True
 )
 def update_player_table(filtered_rookie_json, page_current, page_size):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
@@ -181,6 +188,7 @@ def update_player_table(filtered_rookie_json, page_current, page_size):
 @app.callback(
     Output('player-graph-container', 'children'),
     Input('player-table', 'data'),
+    prevent_initial_call=True
 )
 def update_player_graph(rows):
     player_names = [row['player_name'] for row in rows]
@@ -198,36 +206,39 @@ def update_player_graph(rows):
 
 @app.callback(
     Output('player-count-graph-container', 'children'),
-    Input('filtered-rookie-json', 'data')
+    Input('filtered-rookie-json', 'data'),
+    prevent_initial_call=True
 )
 def update_player_count_graph(filtered_rookie_json):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     fig = do_bar_plot_player_count(f_rookie_df)
-    return dcc.Graph(id='player-count-graph', figure=fig)
+    return wrap_with_card(dcc.Graph(id='player-count-graph', figure=fig))
 
 
 @app.callback(
     Output('avg-player-graph-container', 'children'),
-    Input('filtered-rookie-json', 'data')
+    Input('filtered-rookie-json', 'data'),
+    prevent_initial_call=True
 )
 def update_avg_player_graph(filtered_rookie_json):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
     fig = do_scatter_plot_avg_play_time(f_rookie_df, f_stats_df)
-    return dcc.Graph(id='avg-player-graph', figure=fig)
+    return wrap_with_card(dcc.Graph(id='avg-player-graph', figure=fig))
 
 
 @app.callback(
     Output('play-time-histogram-container', 'children'),
     Input('filtered-rookie-json', 'data'),
-    Input('rookie-year-input', 'value'),
+    prevent_initial_call=True
 )
-def update_play_time_histogram(filtered_rookie_json, rookie_year):
+def update_play_time_histogram(filtered_rookie_json):
+    rookie_year = 1
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
     f_stats_df = f_stats_df[f_stats_df['rookie_year'] == rookie_year]
     fig = do_histogram_play_time(f_stats_df)
-    return dcc.Graph(id='avg-player-graph', figure=fig)
+    return wrap_with_card(dcc.Graph(id='avg-player-graph', figure=fig))
 
 
 if __name__ == '__main__':
