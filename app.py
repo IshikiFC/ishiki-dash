@@ -32,8 +32,8 @@ stats_df['stats_label'] = stats_df.apply(lambda x: '{0}({1})'.format(x['team_nam
 joined_team_options = [{'label': x, 'value': x} for x in rookie_df['joined_team_name'].unique()]
 prev_team_options = [{'label': x, 'value': x} for x in rookie_df['prev_team_name'].unique()]
 league_options = [{'label': f'J{x}', 'value': x} for x in [1, 2, 3]]
+category_options = [{'label': x.value, 'value': x.name} for x in TeamCategory]
 position_options = [{'label': x, 'value': x} for x in ['GK', 'DF', 'MF', 'FW']]
-category_options = [[{'label': x.value, 'value': x.name} for x in TeamCategory]]
 
 app.layout = html.Div([
     html.Div(
@@ -45,7 +45,7 @@ app.layout = html.Div([
                          multi=True, style={'width': 250, 'margin': 10}),
             dcc.Dropdown(id='joined-league-dropdown', placeholder='加入リーグを選択', options=league_options,
                          multi=True, style={'width': 250, 'margin': 10}),
-            dcc.Dropdown(id='prev-category-dropdown', placeholder='全所属カテゴリを選択', options=category_options,
+            dcc.Dropdown(id='prev-category-dropdown', placeholder='前所属カテゴリを選択', options=category_options,
                          multi=True, style={'width': 250, 'margin': 10}),
             dcc.Dropdown(id='position-dropdown', placeholder='加入時ポジションを選択', options=position_options,
                          multi=True, style={'width': 250, 'margin': 10}),
@@ -53,9 +53,18 @@ app.layout = html.Div([
                       style={'width': 100, 'height': 30, 'marginLeft': 10, 'marginTop': 'auto',
                              'marginBottom': 'auto'}),
             dcc.Input(id='rookie-year-input', type='number', min=1, max=7, value=1,
-                      style={'width': 100, 'height': 30, 'marginLeft': 10, 'marginTop': 'auto', 'marginBottom': 'auto'})
+                      style={'width': 100, 'height': 30, 'marginLeft': 10, 'marginTop': 'auto',
+                             'marginBottom': 'auto'})
         ],
         style={'display': 'flex', 'flex-direction': 'row'}
+    ),
+    html.Div(
+        id='joined-year-range-slider-container',
+        children=[
+            dcc.RangeSlider(id='joined-year-range-slider', min=2015, max=2021, value=[2015, 2021],
+                            marks={i: str(i) for i in range(2015, 2022)}),
+        ],
+        style={'width': 500}
     ),
 
     html.Div(
@@ -99,7 +108,7 @@ app.layout = html.Div([
 
 
 def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
-                     joined_league_ids=None, positions=None, prev_categories=None):
+                     joined_league_ids=None, prev_categories=None, positions=None, joined_year_range=None):
     mask = np.ones(len(df)).astype(bool)
     if joined_teams:
         mask &= df['joined_team_name'].isin(joined_teams)
@@ -113,6 +122,9 @@ def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
         mask &= df['position'].isin(positions)
     if prev_categories:
         mask &= df['prev_team_category'].isin(prev_categories)
+    if joined_year_range:
+        mask &= df['joined_year'] >= joined_year_range[0]
+        mask &= df['joined_year'] <= joined_year_range[1]
     return df[mask]
 
 
@@ -122,12 +134,15 @@ def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
     Input('prev-team-dropdown', 'value'),
     Input('joined-league-dropdown', 'value'),
     Input('prev-category-dropdown', 'value'),
-    Input('position-dropdown', 'value')
+    Input('position-dropdown', 'value'),
+    Input('joined-year-range-slider', 'value')
 )
-def update_matched_rookie_df(joined_teams, prev_teams, joined_league_ids, prev_categories, positions):
+def update_matched_rookie_df(joined_teams, prev_teams, joined_league_ids, prev_categories, positions,
+                             joined_year_range):
     f_rookie_df = filter_rookie_df(rookie_df, joined_teams=joined_teams, prev_teams=prev_teams,
                                    joined_league_ids=joined_league_ids,
-                                   prev_categories=prev_categories, positions=positions)
+                                   prev_categories=prev_categories, positions=positions,
+                                   joined_year_range=joined_year_range)
     return f_rookie_df.to_json(date_format='iso', orient='split')
 
 
