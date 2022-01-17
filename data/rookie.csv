@@ -1,4 +1,4 @@
-year,league,player_name,team_name,prev_team_name,prev_team_category,birth,position
+year,league_id,player_name,team_name,prev_team_name,prev_team_category,birth,position
 2015,1,茂木駿佑,ベガルタ仙台,仙台ユース,YOUTH,1996.10.02,MF
 2015,1,西村拓真,ベガルタ仙台,富山第一高,HIGH,1996.10.22,FW
 2015,1,摂津颯登,モンテディオ山形,山形ユース,YOUTH,1996.10.05,GK

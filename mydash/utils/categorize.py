@@ -1,6 +1,6 @@
 from enum import Enum
 
-from mydash.utils import reverse_list_map
+from mydash.utils.common import reverse_list_map
 
 
 class TeamCategory(Enum):

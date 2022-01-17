@@ -6,7 +6,8 @@ from logging import getLogger
 import pandas as pd
 import requests
 
-from mydash.utils import build_url, init_logger, clean_name
+from mydash.utils.common import build_url, clean_name
+from mydash.utils.log import init_logger
 
 LOG_DATE_FORMAT = "%Y-%m-%d %I:%M:%S"
 LOG_FORMAT = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'

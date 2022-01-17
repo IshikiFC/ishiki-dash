@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 
-from mydash.utils import assert_columns
+from mydash.utils.common import assert_columns
 
 LOGGER = getLogger(__name__)
 
@@ -45,11 +45,11 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
 
 
 def do_scatter_plot_avg_play_time(rookie_df, stats_df):
-    assert_columns(rookie_df, ['current_year'])
+    assert_columns(rookie_df, ['cur_rookie_year'])
     assert_columns(stats_df, ['rookie_year', 'league_id', 'league', 'minutes', 'apps', 'goals'])
 
-    agg_rookie_df = rookie_df.groupby('current_year').size().reset_index() \
-        .rename(columns={'current_year': 'rookie_year', 0: 'player_count'})
+    agg_rookie_df = rookie_df.groupby('cur_rookie_year').size().reset_index() \
+        .rename(columns={'cur_rookie_year': 'rookie_year', 0: 'player_count'})
     count_df = pd.DataFrame({'rookie_year': range(1, 8)})
     count_df = pd.merge(count_df, agg_rookie_df, on='rookie_year', how='left')
     count_df['player_count'] = count_df['player_count'].fillna(0).astype(int)

@@ -6,8 +6,10 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from mydash.utils import init_logger, clean_text, clean_name, canonicalize_team, canonicalize_player
+from mydash.utils.canonicalize import canonicalize_team, canonicalize_player
 from mydash.utils.categorize import categorize_team
+from mydash.utils.common import clean_text, clean_name
+from mydash.utils.log import init_logger
 
 LOGGER = getLogger(__name__)
 
@@ -66,7 +68,7 @@ def fetch_players(year, league_id):
             assert team_name
             record = {
                 'year': year,
-                'league': league_id,
+                'league_id': league_id,
                 'team_name': team_name,
                 'player_name': canonicalize_player(clean_name(extract_text(div)))
             }
@@ -80,10 +82,10 @@ def fetch_players(year, league_id):
 def main():
     records = []
     for year in range(2015, 2022):
-        for league in range(1, 4):
-            records += fetch_players(year, league)
+        for league_id in range(1, 4):
+            records += fetch_players(year, league_id)
     out_df = pd.DataFrame(records)
-    out_df = out_df[['year', 'league', 'player_name', 'team_name', 'prev_team_name', 'prev_team_category', 'birth',
+    out_df = out_df[['year', 'league_id', 'player_name', 'team_name', 'prev_team_name', 'prev_team_category', 'birth',
                      'position']]
     out_df.to_csv(args.out, index=False)
     LOGGER.info(f'saved rookies in {args.out}')

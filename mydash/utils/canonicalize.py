@@ -1,4 +1,4 @@
-from mydash.utils import reverse_list_map
+from mydash.utils.common import reverse_list_map
 
 TEAM_TO_ALIASES = {
     'JFAアカデミー福島': ['JFAアカデミー福島U18', 'JFAアカデミー福島U-18'],
