@@ -23,6 +23,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
     fig = px.scatter(stats_df, x='rookie_year', y='y', size='minutes',
                      color='league',
                      category_orders={'league': ['J1', 'J2', 'J3']},
+                     height=max(250, (len(rookie_df) + 1) * 100),
                      **kwargs)
     fig.update_yaxes(range=[4 * len(rookie_df), 0])
     fig.update_xaxes(range=[0.5, 7.5])
@@ -30,11 +31,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
         sizemode='area',
         sizeref=2. * 3600 / (30. ** 2)  # https://plotly.com/python/bubble-charts/
     ))
-
     fig.update_layout(
-        autosize=False,
-        width=800,
-        height=max(250, (len(rookie_df) + 1) * 100),
         yaxis=dict(
             title_text='',
             ticktext=rookie_df['player_label'],
@@ -101,5 +98,4 @@ def do_bar_plot_player_count(rookie_df):
     fig = px.bar(count_df, x="joined_year", y="player_count", color="joined_league",
                  category_orders={'joined_league': ['J1', 'J2', 'J3']},
                  range_x=[2014.5, 2021.5])
-    fig.update_traces(width=0.8)
     return fig

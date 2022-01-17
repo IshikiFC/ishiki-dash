@@ -1,18 +1,18 @@
-# Run this app with `python app.py` and
-# visit http://127.0.0.1:8050/ in your web browser.
 import math
 
 import dash
+import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
-from dash import dcc, Output, Input, dash_table
-from dash import html
+from dash import dcc, Output, Input, dash_table, html
 
 from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_scatter_plot_avg_play_time, \
     do_histogram_play_time
 from mydash.utils.categorize import TeamCategory
 
-app = dash.Dash(__name__)
+app = dash.Dash(
+    external_stylesheets=[dbc.themes.BOOTSTRAP]
+)
 
 rookie_df = pd.read_csv('./data/rookie.csv')
 rookie_df = rookie_df.rename(
@@ -35,76 +35,94 @@ league_options = [{'label': f'J{x}', 'value': x} for x in [1, 2, 3]]
 category_options = [{'label': x.value, 'value': x.name} for x in TeamCategory]
 position_options = [{'label': x, 'value': x} for x in ['GK', 'DF', 'MF', 'FW']]
 
-app.layout = html.Div([
-    html.Div(
-        id='selector-container',
-        children=[
-            dcc.Dropdown(id='joined-team-dropdown', placeholder='加入チームを選択', options=joined_team_options,
-                         multi=True, style={'width': 250, 'margin': 10}),
-            dcc.Dropdown(id='prev-team-dropdown', placeholder='前所属チームを選択', options=prev_team_options,
-                         multi=True, style={'width': 250, 'margin': 10}),
-            dcc.Dropdown(id='joined-league-dropdown', placeholder='加入リーグを選択', options=league_options,
-                         multi=True, style={'width': 250, 'margin': 10}),
-            dcc.Dropdown(id='prev-category-dropdown', placeholder='前所属カテゴリを選択', options=category_options,
-                         multi=True, style={'width': 250, 'margin': 10}),
-            dcc.Dropdown(id='position-dropdown', placeholder='加入時ポジションを選択', options=position_options,
-                         multi=True, style={'width': 250, 'margin': 10}),
-            dcc.Input(id='page-size-input', type='number', min=1, max=100, value=5,
-                      style={'width': 100, 'height': 30, 'marginLeft': 10, 'marginTop': 'auto',
-                             'marginBottom': 'auto'}),
-            dcc.Input(id='rookie-year-input', type='number', min=1, max=7, value=1,
-                      style={'width': 100, 'height': 30, 'marginLeft': 10, 'marginTop': 'auto',
-                             'marginBottom': 'auto'})
-        ],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
-    html.Div(
-        id='joined-year-range-slider-container',
-        children=[
-            dcc.RangeSlider(id='joined-year-range-slider', min=2015, max=2021, value=[2015, 2021],
-                            marks={i: str(i) for i in range(2015, 2022)}),
-        ],
-        style={'width': 500}
-    ),
+dropbox_style = {'width': '100%', 'maxWidth': '200px', 'marginLeft': 10, 'marginRight': 10, 'marginTop': 3,
+                 'marginBottom': 3}
+input_style = {'width': 100, 'marginLeft': 10, 'marginRight': 10, 'marginTop': 'auto', 'marginBottom': 'auto'}
+slider_style = {'width': 500, 'margin': 10}
 
-    html.Div(
-        id='two-pane-container',
-        children=[
-            html.Div(
-                id='player-container',
-                children=[
-                    html.Div(
-                        id='player-table-container',
-                        children=[dash_table.DataTable(
-                            id='player-table',
-                            columns=[
-                                {'name': i, 'id': i} for i in
-                                ['player_name', 'joined_year', 'joined_league_id', 'joined_team_name', 'prev_team_name']
-                            ],
-                            page_current=0,
-                            page_action='custom'
-                        )],
-                        style={'width': 600}
-                    ),
-                    html.Div(id='player-graph-container'),
-                ],
-                style={'width': 800, 'margin': 50}
-            ),
-            html.Div(
-                id='agg-container',
-                children=[
-                    html.Div(id='player-count-graph-container'),
-                    html.Div(id='avg-player-graph-container'),
-                    html.Div(id='play-time-histogram-container')
-                ],
-                style={'width': 800, 'margin': 50}
-            ),
-        ],
-        style={'display': 'flex', 'flex-direction': 'row'}
-    ),
 
-    dcc.Store(id='filtered-rookie-json')
-])
+def wrap_with_card(content):
+    return html.Div([
+        dbc.Card(
+            dbc.CardBody(content)
+        )
+    ])
+
+
+sidebar = html.Div(
+    id='selector-container',
+    children=[
+        dcc.Dropdown(id='joined-team-dropdown', placeholder='加入チーム', options=joined_team_options,
+                     multi=True, style=dropbox_style),
+        dcc.Dropdown(id='prev-team-dropdown', placeholder='前所属チーム', options=prev_team_options,
+                     multi=True, style=dropbox_style),
+        dcc.Dropdown(id='joined-league-dropdown', placeholder='加入リーグ', options=league_options,
+                     multi=True, style=dropbox_style),
+        dcc.Dropdown(id='prev-category-dropdown', placeholder='前所属カテゴリ', options=category_options,
+                     multi=True, style=dropbox_style),
+        dcc.Dropdown(id='position-dropdown', placeholder='ポジション', options=position_options,
+                     multi=True, style=dropbox_style),
+        html.Div(
+            id='joined-year-range-slider-container',
+            children=[
+                dcc.RangeSlider(
+                    id='joined-year-range-slider', min=2015, max=2021, value=[2015, 2021],
+                    marks={i: str(i)[-2:] for i in range(2015, 2022)})],
+            style=slider_style
+        ),
+        dcc.Input(id='page-size-input', type='number', min=1, max=100, value=5, style=input_style),
+        dcc.Input(id='rookie-year-input', type='number', min=1, max=7, value=1, style=input_style),
+    ],
+    style={'display': 'flex', 'flex-direction': 'row', 'flex-wrap': 'wrap', 'justify-content': 'center'}
+)
+
+content1 = dbc.Row(
+    id='player-container',
+    children=[
+        dbc.Col(
+            id='player-table-container',
+            children=dash_table.DataTable(
+                id='player-table',
+                columns=[
+                    {'name': i.replace('_', ' '), 'id': i} for i in
+                    ['player_name', 'joined_year', 'joined_league_id', 'joined_team_name', 'prev_team_name']
+                ],
+                page_current=0,
+                page_action='custom',
+                style_cell={
+                    'whiteSpace': 'normal',
+                    'height': 'auto'
+                }
+            ),
+        ),
+        dbc.Col(id='player-graph-container'),
+    ],
+    style={'justify-content': 'center'}
+)
+
+content2 = html.Div(
+    id='agg-container',
+    children=[
+        html.Div(id='player-count-graph-container'),
+        html.Div(id='avg-player-graph-container'),
+        html.Div(id='play-time-histogram-container')
+    ]
+)
+
+app.layout = dbc.Container(
+    [
+        html.Div(sidebar, className='bg-light'),
+        dbc.Row(
+            [
+                html.Div(content1, className='col-xl-6'),
+                html.Div(content2, className='col-xl-6')
+            ],
+            style={"height": "10vh"}
+        ),
+        dcc.Store(id='filtered-rookie-json')
+    ],
+    fluid=False
+)
 
 
 def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
@@ -175,7 +193,7 @@ def update_player_graph(rows):
         hover_data={'minutes': True, 'apps': True, 'goals': True,
                     'rookie_year': False, 'y': False, 'league': False}
     )
-    return [dcc.Graph(id='player-graph', figure=fig)]
+    return wrap_with_card(dcc.Graph(id='player-graph', figure=fig))
 
 
 @app.callback(
@@ -185,7 +203,7 @@ def update_player_graph(rows):
 def update_player_count_graph(filtered_rookie_json):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     fig = do_bar_plot_player_count(f_rookie_df)
-    return [dcc.Graph(id='player-count-graph', figure=fig)]
+    return dcc.Graph(id='player-count-graph', figure=fig)
 
 
 @app.callback(
@@ -196,7 +214,7 @@ def update_avg_player_graph(filtered_rookie_json):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
     fig = do_scatter_plot_avg_play_time(f_rookie_df, f_stats_df)
-    return [dcc.Graph(id='avg-player-graph', figure=fig)]
+    return dcc.Graph(id='avg-player-graph', figure=fig)
 
 
 @app.callback(
@@ -209,7 +227,7 @@ def update_play_time_histogram(filtered_rookie_json, rookie_year):
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
     f_stats_df = f_stats_df[f_stats_df['rookie_year'] == rookie_year]
     fig = do_histogram_play_time(f_stats_df)
-    return [dcc.Graph(id='avg-player-graph', figure=fig)]
+    return dcc.Graph(id='avg-player-graph', figure=fig)
 
 
 if __name__ == '__main__':
