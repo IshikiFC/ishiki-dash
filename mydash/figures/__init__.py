@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 
 from mydash.utils.common import assert_columns
+from mydash.utils.df import get_avg_stats_df
 
 LOGGER = getLogger(__name__)
 
@@ -57,29 +58,17 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
 
 
 def do_scatter_plot_avg_play_time(rookie_df, stats_df):
-    LOGGER.info(f'do_scatter_plot_avg_play_time: #players={len(rookie_df)}, #stats={len(stats_df)}')
     assert_columns(rookie_df, ['cur_rookie_year'])
     assert_columns(stats_df, ['rookie_year', 'league_id', 'league', 'minutes', 'apps', 'goals'])
 
-    agg_rookie_df = rookie_df.groupby('cur_rookie_year').size().reset_index() \
-        .rename(columns={'cur_rookie_year': 'rookie_year', 0: 'player_count'})
-    count_df = pd.DataFrame({'rookie_year': range(1, 8)})  # max 7 as of 2021
-    count_df = pd.merge(count_df, agg_rookie_df, on='rookie_year', how='left')
-    count_df['player_count'] = count_df['player_count'].fillna(0).astype(int)
-    count_df['player_count'] = count_df['player_count'][::-1].cumsum()[::-1]
-    count_df = count_df[count_df['player_count'] > 0]
-
-    agg_stats_df = stats_df.groupby(['rookie_year', 'league_id', 'league'])[['minutes', 'apps', 'goals']].sum() \
-        .reset_index()
-    agg_stats_df = pd.merge(agg_stats_df, count_df, on='rookie_year')
-    for field in ['minutes', 'apps', 'goals']:
-        agg_stats_df[field] = agg_stats_df[field] / agg_stats_df['player_count']
+    avg_stats_df = get_avg_stats_df(rookie_df, stats_df)
 
     # build dummy DataFrames for scatter_plot
     player_name = 'Avg.'
     d_rookie_df = pd.DataFrame([{'player_name': player_name, 'player_label': player_name}])
-    d_stats_df = agg_stats_df
+    d_stats_df = avg_stats_df
     d_stats_df['player_name'] = player_name
+    d_stats_df['league'] = d_stats_df['league_id'].map(lambda x: f'J{x}')
     d_stats_df = d_stats_df.rename(columns={'player_count': '#players'})
 
     return do_scatter_plot_play_time(

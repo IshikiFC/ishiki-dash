@@ -20,7 +20,7 @@ def build_url(base_url, query_dict):
 
 def assert_columns(df, columns):
     for col in columns:
-        assert col in df.columns
+        assert col in df.columns, f'column does not exist: \'{col}\' not in  {list(df.columns)}'
 
 
 def reverse_list_map(list_map):

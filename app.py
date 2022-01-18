@@ -3,13 +3,13 @@ from logging import getLogger
 
 import dash
 import dash_bootstrap_components as dbc
-import numpy as np
 import pandas as pd
 from dash import dcc, Output, Input, dash_table, html
 
 from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_scatter_plot_avg_play_time, \
     do_histogram_play_time
 from mydash.utils.categorize import TeamCategory
+from mydash.utils.df import filter_rookie_df, get_avg_stats_df
 
 LOGGER = getLogger(__name__)
 
@@ -111,14 +111,6 @@ player_container = html.Div([
             ))
         ]
     ),
-    html.Div(
-        id='avg-player-graph-container',
-        children=[
-            wrap_with_card(dcc.Graph(
-                id='avg-player-graph',
-            ))
-        ]
-    ),
 ])
 
 agg_container = html.Div([
@@ -148,27 +140,6 @@ app.layout = dbc.Container(
     ],
     fluid=True
 )
-
-
-def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
-                     joined_league_ids=None, prev_categories=None, positions=None, joined_year_range=None):
-    mask = np.ones(len(df)).astype(bool)
-    if joined_teams:
-        mask &= df['joined_team_name'].isin(joined_teams)
-    if prev_teams:
-        mask &= df['prev_team_name'].isin(prev_teams)
-    if player_names:
-        mask &= df['player_name'].isin(player_names)
-    if joined_league_ids:
-        mask &= df['joined_league_id'].isin(joined_league_ids)
-    if positions:
-        mask &= df['position'].isin(positions)
-    if prev_categories:
-        mask &= df['prev_team_category'].isin(prev_categories)
-    if joined_year_range:
-        mask &= df['joined_year'] >= joined_year_range[0]
-        mask &= df['joined_year'] <= joined_year_range[1]
-    return df[mask]
 
 
 @app.callback(
@@ -206,18 +177,38 @@ def update_player_table(filtered_rookie_json, page_current, page_size):
 
 @app.callback(
     Output('player-graph', 'figure'),
+    Input('filtered-rookie-json', 'data'),
     Input('player-table', 'data'),
     prevent_initial_call=True
 )
-def update_player_graph(rows):
-    player_names = [row['player_name'] for row in rows]
-    f_rookie_df = filter_rookie_df(rookie_df, player_names=player_names)
+def update_player_graph(filtered_rookie_json, rows):
+    # calculate avg stats
+    f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
+    avg_stats_df = get_avg_stats_df(f_rookie_df, f_stats_df)
+
+    # build data frames for the avg player
+    player_name = 'Avg.'
+    d_rookie_df = pd.DataFrame([{'player_name': player_name, 'player_label': player_name}])
+    d_stats_df = avg_stats_df
+    d_stats_df['player_name'] = player_name
+    d_stats_df['stats_label'] = player_name
+    d_stats_df['league'] = d_stats_df['league_id'].map(lambda x: f'J{x}')
+
+    # build data frames for table records
+    player_names = [row['player_name'] for row in rows]
+    t_rookie_df = filter_rookie_df(f_rookie_df, player_names=player_names)
+    t_stats_df = pd.merge(stats_df, t_rookie_df['player_name'], on='player_name')
+
+    # concat data frames for plotting
+    p_rookie_df = d_rookie_df.append(t_rookie_df)
+    p_stats_df = d_stats_df.append(t_stats_df)
+
     fig = do_scatter_plot_play_time(
-        f_rookie_df,
-        f_stats_df,
+        p_rookie_df,
+        p_stats_df,
         hover_name='stats_label',
-        hover_data={'minutes': True, 'apps': True, 'goals': True,
+        hover_data={'minutes': ':.1f', 'apps': ':.1f', 'goals': ':.1f',
                     'rookie_year': False, 'y': False, 'league': False}
     )
     return fig
@@ -232,19 +223,6 @@ def update_player_count_graph(filtered_rookie_json):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     fig = do_bar_plot_player_count(f_rookie_df)
     return wrap_with_card(dcc.Graph(id='player-count-graph', figure=fig))
-
-
-@app.callback(
-    Output('avg-player-graph', 'figure'),
-    Input('filtered-rookie-json', 'data'),
-    prevent_initial_call=True
-)
-def update_avg_player_graph(filtered_rookie_json):
-    f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
-    f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
-    fig = do_scatter_plot_avg_play_time(f_rookie_df, f_stats_df)
-    return fig
-
 
 @app.callback(
     Output('play-time-histogram', 'figure'),
