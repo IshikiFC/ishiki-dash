@@ -96,5 +96,5 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--out', help='出力ファイル名', default='./data/rookie.csv')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
-    init_logger(args)
+    init_logger(args.verbose)
     main()

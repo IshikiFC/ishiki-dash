@@ -1,4 +1,5 @@
 import math
+from logging import getLogger
 
 import dash
 import dash_bootstrap_components as dbc
@@ -9,6 +10,8 @@ from dash import dcc, Output, Input, dash_table, html
 from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_scatter_plot_avg_play_time, \
     do_histogram_play_time
 from mydash.utils.categorize import TeamCategory
+
+LOGGER = getLogger(__name__)
 
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP]
@@ -49,7 +52,6 @@ def wrap_with_card(content):
 
 
 selector_container = dbc.Row(
-    id='selector-container',
     children=[
         dcc.Dropdown(id='joined-team-dropdown', placeholder='加入チーム', options=joined_team_options,
                      multi=True, style=dropbox_style),
@@ -82,47 +84,64 @@ col2label = {
     'position': 'Position',
 }
 
-player_container = html.Div(
-    id='player-container',
-    children=[
-        html.Div(
-            id='player-table-container',
-            children=dash_table.DataTable(
-                id='player-table',
-                columns=[{'name': label, 'id': col} for col, label in col2label.items()],
-                page_current=0,
-                page_size=5,
-                page_action='custom',
-                style_cell={
-                    'whiteSpace': 'normal',
-                    'height': 'auto'
-                },
-                style_header={
-                    'fontWeight': 'bold',
-                    'textAlign': 'center'
-                }
-            ),
+player_container = html.Div([
+    html.Div(
+        dash_table.DataTable(
+            id='player-table',
+            columns=[{'name': label, 'id': col} for col, label in col2label.items()],
+            page_current=0,
+            page_size=5,
+            page_action='custom',
+            style_cell={
+                'whiteSpace': 'normal',
+                'height': 'auto'
+            },
+            style_header={
+                'fontWeight': 'bold',
+                'textAlign': 'center'
+            }
         ),
-        html.Div(id='player-graph-container'),
-    ]
-)
+    ),
+    html.Div(
+        id='player-graph-container',
+        children=[
+            wrap_with_card(dcc.Graph(
+                id='player-graph',
+                hoverData=None
+            ))
+        ]
+    ),
+    html.Div(
+        id='avg-player-graph-container',
+        children=[
+            wrap_with_card(dcc.Graph(
+                id='avg-player-graph',
+            ))
+        ]
+    ),
+])
 
-agg_container = html.Div(
-    id='agg-container',
-    children=[
-        html.Div(id='player-count-graph-container'),
-        html.Div(id='avg-player-graph-container'),
-        html.Div(id='play-time-histogram-container')
-    ]
-)
+agg_container = html.Div([
+    html.Div(id='player-count-graph-container'),
+    html.Div(
+        id='play-time-histogram-container',
+        children=[
+            wrap_with_card(
+                dcc.Graph(
+                    id='play-time-histogram'
+                )
+            )
+        ]
+    )
+])
 
 app.layout = dbc.Container(
-    [
+    children=[
         html.Div(selector_container, className='bg-light'),
         dbc.Row(
             [
-                html.Div(player_container, className='col-xl-6'),
-                html.Div(agg_container, className='col-xl-6')
+                html.Div(player_container, className='col-lg-6'),
+                html.Div(agg_container, className='col-lg-6')
             ]
         ),
         dcc.Store(id='filtered-rookie-json')
@@ -186,7 +205,7 @@ def update_player_table(filtered_rookie_json, page_current, page_size):
 
 
 @app.callback(
-    Output('player-graph-container', 'children'),
+    Output('player-graph', 'figure'),
     Input('player-table', 'data'),
     prevent_initial_call=True
 )
@@ -201,7 +220,7 @@ def update_player_graph(rows):
         hover_data={'minutes': True, 'apps': True, 'goals': True,
                     'rookie_year': False, 'y': False, 'league': False}
     )
-    return wrap_with_card(dcc.Graph(id='player-graph', figure=fig))
+    return fig
 
 
 @app.callback(
@@ -216,7 +235,7 @@ def update_player_count_graph(filtered_rookie_json):
 
 
 @app.callback(
-    Output('avg-player-graph-container', 'children'),
+    Output('avg-player-graph', 'figure'),
     Input('filtered-rookie-json', 'data'),
     prevent_initial_call=True
 )
@@ -224,21 +243,32 @@ def update_avg_player_graph(filtered_rookie_json):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
     fig = do_scatter_plot_avg_play_time(f_rookie_df, f_stats_df)
-    return wrap_with_card(dcc.Graph(id='avg-player-graph', figure=fig))
+    return fig
 
 
 @app.callback(
-    Output('play-time-histogram-container', 'children'),
+    Output('play-time-histogram', 'figure'),
     Input('filtered-rookie-json', 'data'),
+    Input('player-graph', 'hoverData'),
     prevent_initial_call=True
 )
-def update_play_time_histogram(filtered_rookie_json):
-    rookie_year = 1
+def update_play_time_histogram(filtered_rookie_json, hover_data):
+    if hover_data:
+        point = hover_data['points'][0]
+        rookie_year = point['x']
+        league_id = point['y'] % 4
+    else:
+        rookie_year = 1
+        league_id = None
+
+    rookie_year = hover_data['points'][0]['x'] if hover_data else 1
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
     f_stats_df = f_stats_df[f_stats_df['rookie_year'] == rookie_year]
+    if league_id:
+        f_stats_df = f_stats_df[f_stats_df['league_id'] == league_id]
     fig = do_histogram_play_time(f_stats_df)
-    return wrap_with_card(dcc.Graph(id='avg-player-graph', figure=fig))
+    return fig
 
 
 if __name__ == '__main__':
