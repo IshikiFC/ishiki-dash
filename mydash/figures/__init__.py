@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 
-from mydash.utils.common import assert_columns
+from mydash.utils.df import assert_columns
 from mydash.utils.df import get_avg_stats_df
 
 LOGGER = getLogger(__name__)
@@ -21,6 +21,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
     stats_df = pd.merge(stats_df, rookie_df[['player_name', 'player_index']], on='player_name')
     stats_df['y'] = 4 * stats_df['player_index'] + stats_df['league_id']
 
+    fig = None
     for _ in range(2):
         # Plotly randomly fails. We can retry plotting, a hack found in the following discussion forum
         # https://community.plotly.com/t/valueerror-invalid-value-in-basedatatypes-py/55993
@@ -36,6 +37,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
                 continue
             LOGGER.exception(f'failed to scatter plot: {stats_df}')
             raise e
+    assert fig is not None
     fig.update_yaxes(range=[4 * len(rookie_df), 0])
     fig.update_xaxes(range=[0.5, 7.5])
     fig.update_traces(

@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
 
-from mydash.utils.common import assert_columns
+
+def assert_columns(df, columns):
+    for col in columns:
+        assert col in df.columns, f'column does not exist: \'{col}\' not in  {list(df.columns)}'
 
 
 def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
