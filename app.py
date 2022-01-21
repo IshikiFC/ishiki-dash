@@ -9,30 +9,17 @@ from dash import dcc, Output, Input, dash_table, html
 from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_histogram_play_time
 from mydash.ui import wrap_with_card, STYLE_CELL, STYLE_HEADER, STYLE_DROPBOX, STYLE_SLIDER, STYLE_CONTAINER
 from mydash.utils.categorize import TeamCategory
-from mydash.utils.df import filter_rookie_df, get_avg_stats_df
+from mydash.utils.constants import FIRST_YEAR, LAST_YEAR
+from mydash.utils.df import filter_rookie_df, get_avg_stats_df, load_rookie_df, load_stats_df
 
 LOGGER = getLogger(__name__)
-FIRST_YEAR = 2015
-LAST_YEAR = 2021
 
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP]
 )
 
-rookie_df = pd.read_csv('./data/rookie.csv')
-rookie_df = rookie_df.rename(
-    columns=dict([(col, f'joined_{col}') for col in ['year', 'league_id', 'team_name']])
-)
-rookie_df['joined_league'] = rookie_df['joined_league_id'].map(lambda x: f'J{x}')
-rookie_df['player_label'] = rookie_df.apply(lambda x: '{0}({1})<br>{2}<br>{3}'.format(
-    x['player_name'], x['joined_year'], x['joined_team_name'], x['prev_team_name']), axis=1)
-rookie_df['cur_rookie_year'] = LAST_YEAR - rookie_df['joined_year'] + 1
-
-stats_df = pd.read_csv('./data/stats_rookie.csv')
-stats_df['league'] = stats_df['league_id'].map(lambda x: f'J{x}')
-stats_df = pd.merge(stats_df, rookie_df[['player_name', 'joined_year']], on='player_name')
-stats_df['rookie_year'] = stats_df['year'] - stats_df['joined_year'] + 1
-stats_df['stats_label'] = stats_df.apply(lambda x: '{0}({1})'.format(x['team_name'], x['year']), axis=1)
+rookie_df = load_rookie_df()
+stats_df = load_stats_df(rookie_df)
 
 joined_team_options = [{'label': x, 'value': x} for x in rookie_df['joined_team_name'].unique()]
 prev_team_options = [{'label': x, 'value': x} for x in rookie_df['prev_team_name'].unique()]
