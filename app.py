@@ -1,16 +1,17 @@
 import math
+from dataclasses import dataclass, asdict
 from logging import getLogger
 
 import dash
 import dash_bootstrap_components as dbc
 import pandas as pd
-from dash import dcc, Output, Input, dash_table, html
+from dash import dcc, Output, Input, dash_table, html, State
 
 from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_histogram_play_time
 from mydash.ui import wrap_with_card, STYLE_CELL, STYLE_HEADER, STYLE_DROPBOX, STYLE_SLIDER, STYLE_CONTAINER
 from mydash.utils.categorize import TeamCategory
 from mydash.utils.constants import FIRST_YEAR, LAST_YEAR
-from mydash.utils.df import filter_rookie_df, get_avg_stats_df, load_rookie_df, load_stats_df
+from mydash.utils.df import filter_rookie_df, get_avg_stats_df, load_rookie_df, load_stats_df, filter_stats_df
 
 LOGGER = getLogger(__name__)
 
@@ -92,7 +93,8 @@ app.layout = dbc.Container(
             html.Div(player_container, className='col-lg-6'),
             html.Div(summary_container, className='col-lg-6')
         ]),
-        dcc.Store(id='filtered-rookie-json')
+        dcc.Store(id='filtered-rookie-json'),
+        dcc.Store(id='histogram-config-json')
     ],
     fluid=True
 )
@@ -105,14 +107,25 @@ app.layout = dbc.Container(
     Input('joined-league-dropdown', 'value'),
     Input('prev-category-dropdown', 'value'),
     Input('position-dropdown', 'value'),
-    Input('joined-year-range-slider', 'value')
+    Input('joined-year-range-slider', 'value'),
+    Input('play-time-histogram', 'selectedData'),
+    State('histogram-config-json', 'data')
 )
 def update_filtered_rookie_json(joined_teams, prev_teams, joined_league_ids, prev_categories, positions,
-                                joined_year_range):
+                                joined_year_range, histogram_selected_data, histogram_config_json):
     f_rookie_df = filter_rookie_df(rookie_df, joined_teams=joined_teams, prev_teams=prev_teams,
                                    joined_league_ids=joined_league_ids,
                                    prev_categories=prev_categories, positions=positions,
                                    joined_year_range=joined_year_range)
+
+    is_histogram_selected = any([x['prop_id'] == 'play-time-histogram.selectedData'
+                                 for x in dash.callback_context.triggered])
+    if is_histogram_selected:
+        histogram_config = HistogramConfig(**histogram_config_json)
+        f_stats_df = filter_stats_df(stats_df, rookie_year=histogram_config.rookie_year,
+                                     league_id=histogram_config.league_id,
+                                     minutes_range=histogram_selected_data['range']['x'])
+        f_rookie_df = pd.merge(f_rookie_df, f_stats_df[['player_name']], on='player_name')
     return f_rookie_df.to_json(orient='split')
 
 
@@ -181,27 +194,32 @@ def update_player_count_plot(filtered_rookie_json):
     return fig
 
 
+@dataclass
+class HistogramConfig:
+    rookie_year: int = 1
+    league_id: int = 1
+
+
 @app.callback(
     Output('play-time-histogram', 'figure'),
+    Output('histogram-config-json', 'data'),
     Input('filtered-rookie-json', 'data'),
     Input('play-time-plot', 'hoverData'),
     prevent_initial_call=True
 )
 def update_play_time_histogram(filtered_rookie_json, hover_data):
+    config = HistogramConfig()
     if hover_data:
         point = hover_data['points'][0]
-        rookie_year = point['x']
-        league_id = point['y'] % 4
-    else:
-        rookie_year = 1
-        league_id = 1
+        config.rookie_year = point['x']
+        config.league_id = point['y'] % 4
 
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
     f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
-    f_stats_df = f_stats_df[f_stats_df['rookie_year'] == rookie_year]
-    f_stats_df = f_stats_df[f_stats_df['league_id'] == league_id]
+    f_stats_df = f_stats_df[f_stats_df['rookie_year'] == config.rookie_year]
+    f_stats_df = f_stats_df[f_stats_df['league_id'] == config.league_id]
     fig = do_histogram_play_time(f_stats_df)
-    return fig
+    return fig, asdict(config)
 
 
 if __name__ == '__main__':

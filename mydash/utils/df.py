@@ -51,6 +51,18 @@ def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
     return df[mask]
 
 
+def filter_stats_df(df, rookie_year=None, league_id=None, minutes_range=None):
+    mask = np.ones(len(df)).astype(bool)
+    if rookie_year:
+        mask &= df['rookie_year'] == rookie_year
+    if league_id:
+        mask &= df['league_id'] == league_id
+    if minutes_range:
+        mask &= df['minutes'] >= minutes_range[0]
+        mask &= df['minutes'] <= minutes_range[1]
+    return df[mask]
+
+
 def get_avg_stats_df(rookie_df, stats_df, stats_cols=None):
     if stats_cols is None:
         stats_cols = ['minutes', 'apps', 'goals']
