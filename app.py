@@ -1,5 +1,5 @@
 import math
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from logging import getLogger
 
 import dash
@@ -7,7 +7,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from dash import dcc, Output, Input, dash_table, html, State
 
-from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_histogram_play_time
+from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_histogram_play_time, HistogramConfig
 from mydash.ui import wrap_with_card, STYLE_CELL, STYLE_HEADER, STYLE_DROPBOX, STYLE_SLIDER, STYLE_CONTAINER
 from mydash.utils.categorize import TeamCategory
 from mydash.utils.constants import FIRST_YEAR, LAST_YEAR
@@ -194,12 +194,6 @@ def update_player_count_plot(filtered_rookie_json):
     return fig
 
 
-@dataclass
-class HistogramConfig:
-    rookie_year: int = 1
-    league_id: int = 1
-
-
 @app.callback(
     Output('play-time-histogram', 'figure'),
     Output('histogram-config-json', 'data'),
@@ -215,10 +209,9 @@ def update_play_time_histogram(filtered_rookie_json, hover_data):
         config.league_id = point['y'] % 4
 
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
-    f_stats_df = pd.merge(stats_df, f_rookie_df['player_name'], on='player_name')
-    f_stats_df = f_stats_df[f_stats_df['rookie_year'] == config.rookie_year]
-    f_stats_df = f_stats_df[f_stats_df['league_id'] == config.league_id]
-    fig = do_histogram_play_time(f_stats_df)
+    f_stats_df = filter_stats_df(stats_df, player_names=set(f_rookie_df['player_name']), rookie_year=config.rookie_year,
+                                 league_id=config.league_id)
+    fig = do_histogram_play_time(f_stats_df, config)
     return fig, asdict(config)
 
 

@@ -22,7 +22,7 @@ def load_rookie_df():
 
 
 def load_stats_df(rookie_df):
-    stats_df = pd.read_csv('./data/stats_rookie.csv')
+    stats_df = pd.read_csv('./data/stats_processed.csv')
     stats_df['league'] = stats_df['league_id'].map(lambda x: f'J{x}')
     stats_df = pd.merge(stats_df, rookie_df[['player_name', 'joined_year']], on='player_name')
     stats_df['rookie_year'] = stats_df['year'] - stats_df['joined_year'] + 1
@@ -51,7 +51,7 @@ def filter_rookie_df(df, joined_teams=None, prev_teams=None, player_names=None,
     return df[mask]
 
 
-def filter_stats_df(df, rookie_year=None, league_id=None, minutes_range=None):
+def filter_stats_df(df, rookie_year=None, league_id=None, minutes_range=None, player_names=None):
     mask = np.ones(len(df)).astype(bool)
     if rookie_year:
         mask &= df['rookie_year'] == rookie_year
@@ -60,6 +60,8 @@ def filter_stats_df(df, rookie_year=None, league_id=None, minutes_range=None):
     if minutes_range:
         mask &= df['minutes'] >= minutes_range[0]
         mask &= df['minutes'] <= minutes_range[1]
+    if player_names:
+        mask &= df['player_name'].isin(player_names)
     return df[mask]
 
 

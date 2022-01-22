@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from logging import getLogger
 
 import pandas as pd
@@ -5,8 +6,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 
+from mydash.utils.constants import FIRST_YEAR, LAST_YEAR
 from mydash.utils.df import assert_columns
-from mydash.utils.df import get_avg_stats_df
 
 LOGGER = getLogger(__name__)
 
@@ -39,7 +40,7 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
             raise e
     assert fig is not None
     fig.update_yaxes(range=[4 * len(rookie_df), 0])
-    fig.update_xaxes(range=[0.5, 7.5])
+    fig.update_xaxes(range=[0.5, LAST_YEAR - FIRST_YEAR + 1.5])
     fig.update_traces(
         marker=dict(
             sizemode='area',
@@ -59,30 +60,13 @@ def do_scatter_plot_play_time(rookie_df, stats_df, **kwargs):
     return fig
 
 
-def do_scatter_plot_avg_play_time(rookie_df, stats_df):
-    assert_columns(rookie_df, ['cur_rookie_year'])
-    assert_columns(stats_df, ['rookie_year', 'league_id', 'league', 'minutes', 'apps', 'goals'])
-
-    avg_stats_df = get_avg_stats_df(rookie_df, stats_df)
-
-    # build dummy DataFrames for scatter_plot
-    player_name = 'Avg.'
-    d_rookie_df = pd.DataFrame([{'player_name': player_name, 'player_label': player_name}])
-    d_stats_df = avg_stats_df
-    d_stats_df['player_name'] = player_name
-    d_stats_df['league'] = d_stats_df['league_id'].map(lambda x: f'J{x}')
-    d_stats_df = d_stats_df.rename(columns={'player_count': '#players'})
-
-    return do_scatter_plot_play_time(
-        d_rookie_df,
-        d_stats_df,
-        hover_data={'minutes': ':.1f', 'apps': ':.1f', 'goals': ':.1f', '#players': True,
-                    'rookie_year': False, 'y': False, 'league': False}
-    )
+@dataclass
+class HistogramConfig:
+    rookie_year: int = 1
+    league_id: int = 1
 
 
-def do_histogram_play_time(stats_df):
-    LOGGER.info(f'do_histogram_play_time: #stats={len(stats_df)}')
+def do_histogram_play_time(stats_df, config: HistogramConfig):
     assert_columns(stats_df, ['league_id', 'minutes'])
 
     fig = go.Figure()
@@ -95,6 +79,10 @@ def do_histogram_play_time(stats_df):
         ))
     fig.update_xaxes(range=[0, 3600])
     fig.update_layout(
+        title=dict(
+            text=f'league=J{config.league_id}, rookie year={config.rookie_year}, #stats={len(stats_df)}',
+            x=0.5
+        ),
         xaxis_title_text='minutes',
         yaxis_title_text='#players',
         bargap=0.2,
@@ -104,15 +92,17 @@ def do_histogram_play_time(stats_df):
 
 
 def do_bar_plot_player_count(rookie_df):
-    LOGGER.info(f'do_bar_plot_player_count: #players={len(rookie_df)}')
+    assert_columns(rookie_df, ['joined_year', 'joined_league'])
     count_df = rookie_df.groupby(['joined_year', 'joined_league']).size() \
-        .reset_index().rename(columns={0: 'player_count'})
-    fig = px.bar(count_df, x="joined_year", y="player_count", color="joined_league",
-                 category_orders={'joined_league': ['J1', 'J2', 'J3']},
-                 range_x=[2014.5, 2021.5])
+        .reset_index().rename(columns={0: '#players', 'joined_year': 'year', 'joined_league': 'league'})
+    fig = px.bar(count_df, x='year', y='#players', color='league',
+                 category_orders={'league': ['J1', 'J2', 'J3']},
+                 range_x=[FIRST_YEAR-0.5, LAST_YEAR+0.5])
+    fig.update_traces(width=0.8)
     fig.update_layout(
-        xaxis_title_text='year',
-        yaxis_title_text='#player',
-        legend_title_text='league'
+        title=dict(
+            text=f'#players={len(rookie_df)}',
+            x=0.5
+        )
     )
     return fig
