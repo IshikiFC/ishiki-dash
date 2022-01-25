@@ -8,7 +8,8 @@ import pandas as pd
 from dash import dcc, Output, Input, dash_table, html, State
 
 from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_histogram_play_time, HistogramConfig
-from mydash.ui import wrap_with_card, STYLE_CELL, STYLE_HEADER, STYLE_DROPBOX, STYLE_SLIDER, STYLE_CONTAINER
+from mydash.ui import wrap_with_card, STYLE_CELL, STYLE_HEADER, STYLE_DROPBOX, STYLE_SLIDER, STYLE_CONTAINER, \
+    STYLE_RADIO_LABEL, STYLE_RADIO_INPUT
 from mydash.utils.categorize import TeamCategory
 from mydash.utils.constants import FIRST_YEAR, LAST_YEAR
 from mydash.utils.df import filter_rookie_df, get_avg_stats_df, load_rookie_df, load_stats_df, filter_stats_df
@@ -16,7 +17,8 @@ from mydash.utils.df import filter_rookie_df, get_avg_stats_df, load_rookie_df, 
 LOGGER = getLogger(__name__)
 
 app = dash.Dash(
-    external_stylesheets=[dbc.themes.BOOTSTRAP]
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    serve_locally=False
 )
 
 rookie_df = load_rookie_df()
@@ -27,6 +29,7 @@ prev_team_options = [{'label': x, 'value': x} for x in rookie_df['prev_team_name
 league_options = [{'label': f'J{x}', 'value': x} for x in [1, 2, 3]]
 category_options = [{'label': x.value, 'value': x.name} for x in TeamCategory]
 position_options = [{'label': x, 'value': x} for x in ['GK', 'DF', 'MF', 'FW']]
+count_plot_options = [{'label': x, 'value': x.lower()} for x in ['League', 'Category', 'Position']]
 
 table_columns = {
     'player_name': 'Name',
@@ -62,7 +65,7 @@ selector_container = dbc.Row(
 )
 
 player_container = html.Div([
-    html.Div(wrap_with_card(dash_table.DataTable(
+    wrap_with_card(dash_table.DataTable(
         id='player-table',
         columns=table_columns,
         page_current=0,
@@ -70,20 +73,26 @@ player_container = html.Div([
         page_action='custom',
         style_cell=STYLE_CELL,
         style_header=STYLE_HEADER
-    ))),
-    html.Div(wrap_with_card(dcc.Graph(
+    )),
+    wrap_with_card(dcc.Graph(
         id='play-time-plot',
         hoverData=None
-    ))),
+    )),
 ])
 
 summary_container = html.Div([
-    html.Div(wrap_with_card(dcc.Graph(
-        id='player-count-plot'
-    ))),
-    html.Div(wrap_with_card(dcc.Graph(
+    dbc.Card(
+        dbc.CardBody([
+            dcc.RadioItems(id='player-count-plot-radio', options=count_plot_options, value=count_plot_options[0]['value'],
+                           labelStyle=STYLE_RADIO_LABEL, inputStyle=STYLE_RADIO_INPUT),
+            dcc.Graph(
+                id='player-count-plot'
+            ),
+        ])
+    ),
+    wrap_with_card(dcc.Graph(
         id='play-time-histogram'
-    )))
+    ))
 ])
 
 app.layout = dbc.Container(
@@ -122,7 +131,8 @@ def update_filtered_rookie_json(joined_teams, prev_teams, joined_league_ids, pre
                                  for x in dash.callback_context.triggered])
     if is_histogram_selected:
         histogram_config = HistogramConfig(**histogram_config_json)
-        f_stats_df = filter_stats_df(stats_df, rookie_year=histogram_config.rookie_year,
+        f_stats_df = filter_stats_df(stats_df,
+                                     rookie_year_range=[histogram_config.rookie_year, histogram_config.rookie_year],
                                      league_id=histogram_config.league_id,
                                      minutes_range=histogram_selected_data['range']['x'])
         f_rookie_df = pd.merge(f_rookie_df, f_stats_df[['player_name']], on='player_name')
@@ -186,11 +196,12 @@ def update_play_time_plot(filtered_rookie_json, table_records):
 @app.callback(
     Output('player-count-plot', 'figure'),
     Input('filtered-rookie-json', 'data'),
+    Input('player-count-plot-radio', 'value'),
     prevent_initial_call=True
 )
-def update_player_count_plot(filtered_rookie_json):
+def update_player_count_plot(filtered_rookie_json, color_column):
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
-    fig = do_bar_plot_player_count(f_rookie_df)
+    fig = do_bar_plot_player_count(f_rookie_df, color_column=color_column)
     return fig
 
 
@@ -209,7 +220,8 @@ def update_play_time_histogram(filtered_rookie_json, hover_data):
         config.league_id = point['y'] % 4
 
     f_rookie_df = pd.read_json(filtered_rookie_json, orient='split')
-    f_stats_df = filter_stats_df(stats_df, player_names=set(f_rookie_df['player_name']), rookie_year=config.rookie_year,
+    f_stats_df = filter_stats_df(stats_df, player_names=set(f_rookie_df['player_name']),
+                                 rookie_year_range=[config.rookie_year, config.rookie_year],
                                  league_id=config.league_id)
     fig = do_histogram_play_time(f_stats_df, config)
     return fig, asdict(config)

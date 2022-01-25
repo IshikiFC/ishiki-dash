@@ -91,13 +91,28 @@ def do_histogram_play_time(stats_df, config: HistogramConfig):
     return fig
 
 
-def do_bar_plot_player_count(rookie_df):
-    assert_columns(rookie_df, ['joined_year', 'joined_league'])
-    count_df = rookie_df.groupby(['joined_year', 'joined_league']).size() \
-        .reset_index().rename(columns={0: '#players', 'joined_year': 'year', 'joined_league': 'league'})
-    fig = px.bar(count_df, x='year', y='#players', color='league',
-                 category_orders={'league': ['J1', 'J2', 'J3']},
-                 range_x=[FIRST_YEAR-0.5, LAST_YEAR+0.5])
+def do_bar_plot_player_count(rookie_df, color_column='league'):
+    if color_column == 'league':
+        color_column_full = 'joined_league'
+    elif color_column == 'category':
+        color_column_full = 'prev_team_category'
+    elif color_column == 'position':
+        color_column_full = 'position'
+    else:
+        raise ValueError(f'unknown color column = {color_column}')
+
+    assert_columns(rookie_df, ['joined_year', color_column_full])
+    count_df = rookie_df.groupby(['joined_year', color_column_full]).size() \
+        .reset_index().rename(columns={0: '#players',
+                                       'joined_year': 'year',
+                                       color_column_full: color_column})
+    fig = px.bar(count_df, x='year', y='#players', color=color_column,
+                 category_orders={
+                     'league': ['J1', 'J2', 'J3'],
+                     'category': ['HIGH', 'YOUTH', 'UNIV'],
+                     'position': ['GK', 'DF', 'MF', 'FW']
+                 },
+                 range_x=[FIRST_YEAR - 0.5, LAST_YEAR + 0.5])
     fig.update_traces(width=0.8)
     fig.update_layout(
         title=dict(

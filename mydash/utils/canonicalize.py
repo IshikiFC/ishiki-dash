@@ -16,6 +16,7 @@ TEAM_TO_ALIASES = {
 }
 ALIAS_TO_TEAM = reverse_list_map(TEAM_TO_ALIASES)
 
+# Soccer D.B. -> J.League Data Site
 ALIAS_TO_PLAYER = {
     '川崎裕大': '川﨑裕大',
     '髙山和真': '高山和真',
