@@ -8,6 +8,32 @@ STYLE_RADIO_INPUT = {'margin': '3px'}
 STYLE_CELL = {'whiteSpace': 'normal', 'height': 'auto'}
 STYLE_HEADER = {'fontWeight': 'bold', 'textAlign': 'center'}
 
+META_TAGS = [
+    {
+        "name": "author",
+        "content": "Mitsuki Usui"
+    },
+    {
+        "name": "description",
+        "content": "Jリーグの新卒選手のスタッツをダッシュボードで確認できます。",
+    },
+    {
+        "property": "og:type",
+        "content": "website"
+    },
+    {
+        "property": "og:title",
+        "content": "J.LEAGUE Rookie Stats Viewer"
+    },
+    {
+        "property": "og:description",
+        "content": "Jリーグの新卒選手のスタッツをダッシュボードで確認できます。",
+    },
+    {
+        "property": "og:image",
+        "content": "link-to-image.png"
+    },
+]
 
 def wrap_with_card(content):
     return dbc.Card(

@@ -9,7 +9,7 @@ from dash import dcc, Output, Input, dash_table, html, State
 
 from mydash.figures import do_scatter_plot_play_time, do_bar_plot_player_count, do_histogram_play_time, HistogramConfig
 from mydash.ui import wrap_with_card, STYLE_CELL, STYLE_HEADER, STYLE_DROPBOX, STYLE_SLIDER, STYLE_CONTAINER, \
-    STYLE_RADIO_LABEL, STYLE_RADIO_INPUT
+    STYLE_RADIO_LABEL, STYLE_RADIO_INPUT, META_TAGS
 from mydash.utils.categorize import TeamCategory
 from mydash.utils.constants import FIRST_YEAR, LAST_YEAR
 from mydash.utils.df import filter_rookie_df, get_avg_stats_df, load_rookie_df, load_stats_df, filter_stats_df
@@ -18,7 +18,9 @@ LOGGER = getLogger(__name__)
 
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
-    serve_locally=False
+    serve_locally=False,
+    title='J.LEAGUE Rookie Stats Viewer',
+    meta_tags=META_TAGS,
 )
 
 rookie_df = load_rookie_df()
@@ -74,34 +76,54 @@ player_container = html.Div([
         style_cell=STYLE_CELL,
         style_header=STYLE_HEADER
     )),
-    wrap_with_card(dcc.Graph(
-        id='play-time-plot',
-        hoverData=None
-    )),
+    wrap_with_card([
+        html.Div('出場時間の新卒年次推移。バブルの面積は出場時間に比例します。'),
+        dcc.Graph(
+            id='play-time-plot',
+            clickData=None
+        )
+    ]),
 ])
 
 summary_container = html.Div([
-    dbc.Card(
-        dbc.CardBody([
-            dcc.RadioItems(id='player-count-plot-radio', options=count_plot_options, value=count_plot_options[0]['value'],
-                           labelStyle=STYLE_RADIO_LABEL, inputStyle=STYLE_RADIO_INPUT),
-            dcc.Graph(
-                id='player-count-plot'
-            ),
-        ])
-    ),
-    wrap_with_card(dcc.Graph(
-        id='play-time-histogram'
-    ))
+    wrap_with_card([
+        html.Div('新卒選手数の年次推移。ラジオボタンで集計変数を切り替えられます。'),
+        dcc.RadioItems(id='player-count-plot-radio', options=count_plot_options,
+                       value=count_plot_options[0]['value'],
+                       labelStyle=STYLE_RADIO_LABEL, inputStyle=STYLE_RADIO_INPUT),
+        dcc.Graph(
+            id='player-count-plot'
+        ),
+    ]),
+    wrap_with_card([
+        html.Div('出場時間のヒストグラム。左のバブルプロットをクリックすると、対応するリーグと新卒年度に切り替わります。'
+                 'また図右上のBox Select機能を使えば出場時間から選手を絞り込むことができます。'),
+        dcc.Graph(
+            id='play-time-histogram'
+        )
+    ])
+])
+
+about_container = html.Div([
+    dcc.Markdown('''
+    このサイトは以下のサイトから元データを取得しています。
+    * [Soccer D.B.](https://soccer-db.net/contents/2015_j_newcomers.php): 2015年以降のJ1, J2, J3の新卒加入選手
+    * [J.LEAGUE Data Site](https://data.j-league.or.jp/SFPR01/): Jリーグ出場記録
+        
+    データの取得及び加工、ダッシュボードの作成に関するコードは[GitHub](https://github.com/IshikiFC/ishiki-dash)にて公開しています。
+    本サイトに関する質問や、修正依頼等ありましたら、[Googleフォーム](https://forms.gle/9bvvhhE8hNcKB2oe6)からお問い合わせください。
+    ''', style={'margin': '10px'})
 ])
 
 app.layout = dbc.Container(
     children=[
+        html.H1('J. LEAGUE Rookie Stats Viewer', style={'padding': '10px', 'font-size': '30px'}),
         html.Div(selector_container, className='bg-light'),
         dbc.Row([
             html.Div(player_container, className='col-lg-6'),
             html.Div(summary_container, className='col-lg-6')
         ]),
+        html.Div(about_container),
         dcc.Store(id='filtered-rookie-json'),
         dcc.Store(id='histogram-config-json')
     ],
@@ -129,7 +151,7 @@ def update_filtered_rookie_json(joined_teams, prev_teams, joined_league_ids, pre
 
     is_histogram_selected = any([x['prop_id'] == 'play-time-histogram.selectedData'
                                  for x in dash.callback_context.triggered])
-    if is_histogram_selected:
+    if is_histogram_selected and 'range' in histogram_selected_data:
         histogram_config = HistogramConfig(**histogram_config_json)
         f_stats_df = filter_stats_df(stats_df,
                                      rookie_year_range=[histogram_config.rookie_year, histogram_config.rookie_year],
@@ -209,13 +231,13 @@ def update_player_count_plot(filtered_rookie_json, color_column):
     Output('play-time-histogram', 'figure'),
     Output('histogram-config-json', 'data'),
     Input('filtered-rookie-json', 'data'),
-    Input('play-time-plot', 'hoverData'),
+    Input('play-time-plot', 'clickData'),
     prevent_initial_call=True
 )
-def update_play_time_histogram(filtered_rookie_json, hover_data):
+def update_play_time_histogram(filtered_rookie_json, clickData):
     config = HistogramConfig()
-    if hover_data:
-        point = hover_data['points'][0]
+    if clickData:
+        point = clickData['points'][0]
         config.rookie_year = point['x']
         config.league_id = point['y'] % 4
 

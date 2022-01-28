@@ -13,6 +13,7 @@ TEAM_TO_ALIASES = {
     '栃木ユース': ['栃木SCU-18'],
     '流通経済大柏高': ['流通経済大学付属柏高'],
     '湘南U-18': ['湘南ユース'],
+    'コンサドーレ札幌': ['北海道コンサドーレ札幌']
 }
 ALIAS_TO_TEAM = reverse_list_map(TEAM_TO_ALIASES)
 
