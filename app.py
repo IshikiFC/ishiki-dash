@@ -22,6 +22,7 @@ app = dash.Dash(
     title='J.LEAGUE Rookie Stats Viewer',
     meta_tags=META_TAGS,
 )
+server = app.server
 
 rookie_df = load_rookie_df()
 stats_df = load_stats_df(rookie_df)
