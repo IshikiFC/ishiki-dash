@@ -8,32 +8,21 @@ STYLE_RADIO_INPUT = {'margin': '3px'}
 STYLE_CELL = {'whiteSpace': 'normal', 'height': 'auto'}
 STYLE_HEADER = {'fontWeight': 'bold', 'textAlign': 'center'}
 
+TITLE = 'J.LEAGUE Rookie Stats Viewer'
+DESCRIPTION = 'Jリーグの新人選手の出場記録をインタラクティブに可視化するダッシュボードです。'
+IMAGE = 'https://ishiki-dash.s3.ap-northeast-1.amazonaws.com/dashboard.png'
+
 META_TAGS = [
-    {
-        "name": "author",
-        "content": "Mitsuki Usui"
-    },
-    {
-        "name": "description",
-        "content": "Jリーグの新卒選手のスタッツをダッシュボードで確認できます。",
-    },
-    {
-        "property": "og:type",
-        "content": "website"
-    },
-    {
-        "property": "og:title",
-        "content": "J.LEAGUE Rookie Stats Viewer"
-    },
-    {
-        "property": "og:description",
-        "content": "Jリーグの新卒選手のスタッツをダッシュボードで確認できます。",
-    },
-    {
-        "property": "og:image",
-        "content": "link-to-image.png"
-    },
+    {'name': 'description', 'content': DESCRIPTION},
+    {'property': 'og:type', 'content': 'website'},
+    {'property': 'og:title', 'content': TITLE},
+    {'property': 'og:description', 'content': DESCRIPTION},
+    {'property': 'og:image', 'content': IMAGE},
+    {'name': 'twitter:card', 'content': 'summary'},
+    {'name': 'twitter:title', 'content': TITLE},
+    {'name': 'twitter:description', 'content': DESCRIPTION}
 ]
+
 
 def wrap_with_card(content):
     return dbc.Card(
