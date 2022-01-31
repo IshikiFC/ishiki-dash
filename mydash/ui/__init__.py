@@ -18,7 +18,7 @@ META_TAGS = [
     {'property': 'og:title', 'content': TITLE},
     {'property': 'og:description', 'content': DESCRIPTION},
     {'property': 'og:image', 'content': IMAGE},
-    {'name': 'twitter:card', 'content': 'summary'},
+    {'name': 'twitter:card', 'content': 'summary_large_image'},
     {'name': 'twitter:title', 'content': TITLE},
     {'name': 'twitter:description', 'content': DESCRIPTION}
 ]
