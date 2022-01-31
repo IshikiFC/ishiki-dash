@@ -43,6 +43,7 @@ def main():
     rookie_df = rookie_df[['year', 'league_id', 'player_name', 'team_name', 'prev_team_name', 'prev_team_category',
                            'birth', 'position']]
     rookie_df = add_rookie(rookie_df, add_df)
+    rookie_df = rookie_df.sort_values(by=['year', 'league_id', 'team_name', 'player_name'])
 
     rookie_df.to_csv(args.out, index=False)
     LOGGER.info(f'saved {args.out}')
