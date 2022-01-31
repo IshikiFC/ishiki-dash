@@ -28,12 +28,21 @@ def update_columns(rookie_df):
     return p_rookie_df
 
 
+def add_rookie(rookie_df, add_df):
+    assert list(rookie_df.columns) == list(add_df.columns)
+    p_rookie_df = pd.concat([rookie_df, add_df], ignore_index=True)
+    LOGGER.info('added rookie: {} -> {}'.format(len(rookie_df), len(p_rookie_df)))
+    return p_rookie_df
+
+
 def main():
     rookie_df = pd.read_csv(args.rookie)
+    add_df = pd.read_csv(args.add)
 
     rookie_df = update_columns(rookie_df)
     rookie_df = rookie_df[['year', 'league_id', 'player_name', 'team_name', 'prev_team_name', 'prev_team_category',
                            'birth', 'position']]
+    rookie_df = add_rookie(rookie_df, add_df)
 
     rookie_df.to_csv(args.out, index=False)
     LOGGER.info(f'saved {args.out}')
@@ -42,6 +51,7 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ダウンロードした新卒選手一覧の前処理を行う')
     parser.add_argument('-r', '--rookie', help='fetch_rookie.pyで取得したrookieファイル', default='./data/rookie_raw.csv')
+    parser.add_argument('-a', '--add', help='追加するルーキーを登録したファイル', default='./data/rookie_add.csv')
     parser.add_argument('-o', '--out', help='出力ファイル', default='./data/rookie.csv')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
