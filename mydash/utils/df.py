@@ -22,7 +22,7 @@ def load_rookie_df():
 
 
 def load_stats_df(rookie_df):
-    stats_df = pd.read_csv('./data/stats_processed.csv')
+    stats_df = pd.read_csv('./data/stats.csv')
     stats_df['league'] = stats_df['league_id'].map(lambda x: f'J{x}')
     stats_df = pd.merge(stats_df, rookie_df[['player_name', 'joined_year']], on='player_name')
     stats_df['rookie_year'] = stats_df['year'] - stats_df['joined_year'] + 1
