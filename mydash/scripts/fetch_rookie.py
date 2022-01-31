@@ -6,9 +6,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from mydash.utils.canonicalize import canonicalize_team, canonicalize_player
-from mydash.utils.categorize import categorize_team
-from mydash.utils.common import clean_text, clean_name
+from mydash.utils.constants import LEAGUE_IDS, YEARS
 from mydash.utils.log import init_logger
 
 LOGGER = getLogger(__name__)
@@ -29,18 +27,17 @@ def contains_class(div, class_name):
 
 def extract_text(div):
     if contains_class(div, 'group_title'):
-        return div.find(class_='gt_j').text
-    return div.text
+        return div.find(class_='gt_j').text.strip()
+    return div.text.strip()
 
 
 def extract_player_meta(div):
     cells = div.find('table').find_all('td')
     meta = {
-        'position': cells[0].text,
-        'birth': cells[2].text,
-        'prev_team_name': canonicalize_team(clean_text(cells[3].text))
+        'position': cells[0].text.strip(),
+        'birth': cells[2].text.strip(),
+        'prev_team_name': cells[3].text.strip()
     }
-    meta['prev_team_category'] = categorize_team(meta['prev_team_name']).name
     return meta
 
 
@@ -63,14 +60,14 @@ def fetch_players(year, league_id):
     divs = soup.find(class_=main_tag).find_all('div')
     for i, div in enumerate(divs):
         if contains_class(div, team_tag):
-            team_name = canonicalize_team(clean_text(extract_text(div)))
+            team_name = extract_text(div)
         if contains_class(div, player_tag):
             assert team_name
             record = {
                 'year': year,
                 'league_id': league_id,
                 'team_name': team_name,
-                'player_name': canonicalize_player(clean_name(extract_text(div)))
+                'player_name': extract_text(div)
             }
             record.update(extract_player_meta(divs[i + 1]))
             records.append(record)
@@ -81,19 +78,18 @@ def fetch_players(year, league_id):
 
 def main():
     records = []
-    for year in range(2015, 2022):
-        for league_id in range(1, 4):
+    for year in YEARS:
+        for league_id in LEAGUE_IDS:
             records += fetch_players(year, league_id)
     out_df = pd.DataFrame(records)
-    out_df = out_df[['year', 'league_id', 'player_name', 'team_name', 'prev_team_name', 'prev_team_category', 'birth',
-                     'position']]
+    out_df = out_df[['year', 'league_id', 'player_name', 'team_name', 'prev_team_name', 'birth', 'position']]
     out_df.to_csv(args.out, index=False)
     LOGGER.info(f'saved rookies in {args.out}')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Soccer D.B.から新卒選手を取得する')
-    parser.add_argument('-o', '--out', help='出力ファイル名', default='./data/rookie.csv')
+    parser.add_argument('-o', '--out', help='出力ファイル名', default='./data/rookie_raw.csv')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
     init_logger(args.verbose)

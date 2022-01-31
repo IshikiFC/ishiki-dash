@@ -6,7 +6,8 @@ from logging import getLogger
 import pandas as pd
 import requests
 
-from mydash.utils.common import build_url, clean_name
+from mydash.utils.common import build_url
+from mydash.utils.constants import LEAGUE_IDS, YEARS
 from mydash.utils.log import init_logger
 
 LOG_DATE_FORMAT = "%Y-%m-%d %I:%M:%S"
@@ -68,7 +69,7 @@ def fetch_stats(comp: Competition, team: Team):
     records = []
     for _, row in df.iterrows():
         records.append(Stats(
-            player_name=clean_name(row[1]),
+            player_name=row[1].strip(),
             apps=int(row[2]),
             minutes=int(row[3]),
             goals=int(row[4])
@@ -89,7 +90,7 @@ def fetch_teams(comp: Competition):
     for item in data['teamList']:
         records.append(Team(
             team_id=int(item['selectValue']),
-            team_name=item['displayName']
+            team_name=item['displayName'].strip()
         ))
     LOGGER.info(f'fetched {len(records)} teams')
     return records
@@ -97,7 +98,7 @@ def fetch_teams(comp: Competition):
 
 def fetch_competitions(year):
     records = []
-    for frame_id in [1, 2, 3]:
+    for frame_id in LEAGUE_IDS:
         url = 'https://data.j-league.or.jp/SFPR01/createCompetitions'
         payload = {'competition_year': year, 'competition_frame_id': frame_id}
         LOGGER.info(f'fetch competitions from {url}: {payload}')
@@ -108,9 +109,9 @@ def fetch_competitions(year):
         for item in data['competitionList']:
             records.append(Competition(
                 comp_id=int(item['selectValue']),
-                comp_name=item['displayName'],
-                year=year,
-                frame_id=frame_id
+                comp_name=item['displayName'].strip(),
+                year=int(year),
+                frame_id=int(frame_id)
             ))
         LOGGER.info(f'fetched {len(records)} competitions')
     return records
@@ -118,7 +119,7 @@ def fetch_competitions(year):
 
 def main():
     records = []
-    for year in range(2015, 2022):
+    for year in YEARS:
         for comp in fetch_competitions(year):
             for team in fetch_teams(comp):
                 for stat in fetch_stats(comp, team):
@@ -136,7 +137,7 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='J.LEAGUE Data Siteから出場記録を取得する')
-    parser.add_argument('-o', '--out', help='出力ファイル名', default='./data/stats.csv')
+    parser.add_argument('-o', '--out', help='出力ファイル名', default='./data/stats_raw.csv')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
     init_logger(args.verbose)
